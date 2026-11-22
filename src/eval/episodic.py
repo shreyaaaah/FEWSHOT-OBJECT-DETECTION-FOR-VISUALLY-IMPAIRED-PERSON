@@ -20,7 +20,7 @@ import numpy as np
 
 from ..config import ROOT
 from ..memory import PersonalMemory, auroc, l2n
-from ..train.datasets import load_splits
+from ..train.datasets import ensure_splits
 from .common import (embed_files, fmt, list_instance_files, load_model_for_eval, mean_ci,
                      video_kind, write_report)
 
@@ -50,7 +50,7 @@ def choose_support(files, n_frames, k, protocol, rng, cross_video):
 def run(args):
     model, desc = load_model_for_eval(args.ckpt, args.frozen_backbone, args.no_pretrained,
                                       img_size=args.img_size)
-    splits = load_splits(args.splits or os.path.join(args.root, "splits.json"))
+    splits = ensure_splits(args.root, args.splits)
     insts = splits[args.split]
     files = list_instance_files(args.root, insts, min_images=max(args.k_shots) + 3)
     names = sorted(files)

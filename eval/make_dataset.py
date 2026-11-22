@@ -35,7 +35,7 @@ COCO80 = [
 
 
 def detections(sample):
-    labels = sample.get("ground_truth")
+    labels = sample["ground_truth"]
     return labels.detections if labels is not None else []
 
 

@@ -16,7 +16,7 @@ import numpy as np
 from ..augment import adjust_light, gaussian_blur, motion_blur, occlude
 from ..config import ROOT
 from ..memory import PersonalMemory
-from ..train.datasets import load_splits
+from ..train.datasets import ensure_splits
 from .common import fmt, list_instance_files, load_model_for_eval, mean_ci, write_report
 
 DEGRADATIONS = {
@@ -68,7 +68,7 @@ def main():
     a = ap.parse_args()
 
     model, desc = load_model_for_eval(a.ckpt, a.frozen_backbone, a.no_pretrained, img_size=a.img_size)
-    splits = load_splits(a.splits or os.path.join(a.root, "splits.json"))
+    splits = ensure_splits(a.root, a.splits)
     files = list_instance_files(a.root, splits[a.split], min_images=a.k_shot + 3)
     names = sorted(files)
     n_known = min(a.n_known, len(names) - 1)

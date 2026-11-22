@@ -71,6 +71,17 @@ def load_splits(path):
         return json.load(f)
 
 
+def ensure_splits(root, path=None, seed=0):
+    """Load <root>/splits.json, or create it (user-disjoint 70/15/15) if it does not exist yet."""
+    path = path or os.path.join(root, "splits.json")
+    if os.path.exists(path):
+        return load_splits(path)
+    insts = sorted(d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d)))
+    splits = split_instances(insts, seed=seed)
+    save_splits(splits, path)
+    return splits
+
+
 # ------------------------------------------------------------- transforms
 class PadSquare:
     def __call__(self, img: Image.Image) -> Image.Image:

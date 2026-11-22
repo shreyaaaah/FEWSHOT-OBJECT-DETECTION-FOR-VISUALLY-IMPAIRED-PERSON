@@ -172,3 +172,8 @@ confusion matrix and an auto-written `lab_out/REPORT.md`. The confidence thresho
 validation split and all numbers are reported on the test split. Run it on Colab with
 `colab/sahayak_yolo_study.ipynb` (or `python lab.py all --data datasets/sahayak28/data.yaml --epochs 20`).
 Build the dataset first with `python eval/make_dataset.py`. `eval/evaluate_finetuned.py` is deprecated.
+
+## Personal-object recogniser on ORBIT (the novelty)
+`colab/sahayak_orbit_personal_objects.ipynb` downloads ORBIT (blind-user videos), converts it, trains the
+few-shot embedding model (last 2 blocks / LoRA, open-set prototypical loss) and evaluates on unseen users
+with unknown objects mixed in. Status: unit-tested and smoke-tested; not yet run on real ORBIT data.
