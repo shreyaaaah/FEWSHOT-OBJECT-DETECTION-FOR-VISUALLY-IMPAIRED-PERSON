@@ -1,0 +1,40 @@
+backbone:
+  name: vit_small_patch14_dinov2.lvd142m   # timm name, DINOv2 ViT-S/14
+  img_size: 224
+  embed_dim: 256
+  unfreeze_last_blocks: 2
+
+detector:
+  weights: yolov8n.pt          # COCO-pretrained, downloaded by ultralytics
+  conf: 0.35
+  max_det: 20
+
+memory:
+  max_prototypes_per_object: 8   # multi-prototype bank (k-means over frames)
+  reject_percentile: 5           # per-object adaptive threshold percentile
+  margin: 0.04                   # top1 - top2 must exceed this
+  cv_folds: 10                   # blocked-CV folds used to calibrate thresholds
+  cv_gap: 0                      # frames dropped around a held-out block
+  min_threshold: 0.45
+  max_threshold: 0.90
+
+enroll:
+  frames_to_sample: 40
+  keep_top_k: 25
+  min_sharpness: 40.0
+
+train:
+  episodes: 3000
+  n_way: 5
+  k_shot: 5
+  q_query: 10
+  lr_backbone: 1.0e-5
+  lr_head: 1.0e-3
+  temperature: 0.1
+  device: auto
+  save_path: checkpoints/embedder.pt
+
+depth:
+  # focal length in pixels is estimated from horizontal FOV (typical phone ~ 65 deg)
+  hfov_deg: 65.0
+  use_depth_model: false      # set true to use Depth Anything V2 Small (HF)
