@@ -164,3 +164,11 @@ tests/                         unit + pipeline tests
 * What happens with two similar mugs? (margin test, enrollment warning)
 * How is distance computed and how wrong can it be?
 * What did *not* work?
+
+## Detector study: YOLO11n vs YOLO26n vs YOLO26s
+`lab.py` compares the three detectors on 28 COCO classes relevant to blind users: zero-shot baseline vs
+fine-tuned, with precision, recall, F1, mAP@0.5, mAP@0.5:0.95, CPU speed, loss curves, PR/F1 curves,
+confusion matrix and an auto-written `lab_out/REPORT.md`. The confidence threshold is chosen on the
+validation split and all numbers are reported on the test split. Run it on Colab with
+`colab/sahayak_yolo_study.ipynb` (or `python lab.py all --data datasets/sahayak28/data.yaml --epochs 20`).
+Build the dataset first with `python eval/make_dataset.py`. `eval/evaluate_finetuned.py` is deprecated.
