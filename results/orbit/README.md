@@ -31,7 +31,7 @@ In the first evaluation logs (`logs/pipeline_log_eval_*`, `logs/stageC_*`, `logs
 `src/eval/episodic.py` compared the memory's lower-cased object name with the raw ORBIT name (`P189__keys`), so a correct identification could never match.
 Synthetic tests passed because their names were lower case. Fixed (`norm_name`), with a regression test (`tests/test_episodic_names.py`).
 The checkpoints were re-evaluated after the fix (`logs/reeval_fixed_eval_tables_xv_C_B_D.txt`, Colab, same 200 episodes). Closed-set accuracy, AUROC and the fixed-threshold rows were not affected by the bug
-(re-evaluated closed-set accuracy differs by about 1 point from the first run: C-xv 70.8/75.0/75.6, C 73.0/75.1/75.6, B 74.7/80.2/80.3, D 68.2/72.6/72.8 at K=3/5/10; the K=1 lines were not in the pasted log).
+(re-evaluated closed-set accuracy differs by up to about 1.5 points from the first run: C-xv 70.8/75.0/75.6, C 73.0/75.1/75.6, B 74.7/80.2/80.3, D 68.2/72.6/72.8 at K=3/5/10; the K=1 lines were not in the pasted log).
 
 ## Corrected test results of the calibrated memory ("ours") vs fixed cosine thresholds (correct-ID rate % / false-accept rate % on unknown objects)
 | model | K | ours (calibrated memory) | fixed threshold 0.5 | fixed threshold 0.6 |
@@ -46,12 +46,12 @@ The checkpoints were re-evaluated after the fix (`logs/reeval_fixed_eval_tables_
 | | 10 | 41.1 / 20.8 | 48.1 / 23.1 | 27.9 / 10.6 |
 
 ### Honest reading
-* After the fix the memory works (correct-ID 14-17% at K=1 up to 49% at K=10), and it chooses an operating point **between the fixed thresholds 0.5 and 0.6 without any hand-picked global threshold**.
+* After the fix the memory works (correct-ID 10-17% at K=1 up to 38-49% at K=10), and it picks an operating point roughly in the range of the fixed thresholds 0.5-0.6 (for frozen DINOv2 close to 0.5) **without any hand-picked global threshold**.
 * **It does NOT beat a well-chosen fixed threshold.** At the same false-accept rate its correct-ID rate lies on, or slightly below, the line through the fixed-threshold points (e.g. C-xv K=10: ours 49.2% at FAR 22.8%, fixed 0.6 gives 49.2% at FAR 17.8%; for frozen DINOv2 ours is about equal to threshold 0.5).
-  The calibrated probability also ranks known vs unknown objects slightly worse (AUROC 0.69-0.75) than the raw max-cosine score (0.72-0.78). The hypothesis "calibrated memory is better than a fixed threshold" is therefore **not supported** on the test split; what we can claim is that it picks a reasonable operating point automatically.
+  The calibrated probability also ranks known vs unknown objects slightly worse (AUROC 0.67-0.75) than the raw max-cosine score (0.71-0.78). The hypothesis "calibrated memory is better than a fixed threshold" is therefore **not supported** on the test split; what we can claim is that it picks a reasonable operating point automatically.
 * Absolute performance is modest for this hard setting (unseen users, clean enrolment, cluttered queries): about 40-50% correct identification at 15-23% false acceptance for the fine-tuned models, 38% at 14% for frozen DINOv2.
 * The earlier validation-split diagnosis (`logs/pipeline_log_diag_*`) suggested the memory beats the best single global threshold; it measured acceptance only (not identity or margin) and used FAR-matched global thresholds chosen on that same split, so it was too optimistic. Do not quote it as evidence.
-* Run-to-run: re-evaluating the same checkpoints on a different machine changed closed-set accuracy by up to about 1 point, so differences smaller than that between models are not meaningful.
+* Run-to-run: re-evaluating the same checkpoints on a different machine changed closed-set accuracy by up to about 1.5 points, so differences smaller than that between models are not meaningful.
 
 ## Other notes
 * The plain-prototypical-loss run's test evaluation was not completed and the earlier checkpoints were lost with the first Kaggle session; the numbers above come from the final committed run (`pipeline_*` logs); the earlier run's C results (61.7/73.5/76.8/77.0) agree within the confidence intervals.
