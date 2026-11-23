@@ -171,7 +171,14 @@ fine-tuned, with precision, recall, F1, mAP@0.5, mAP@0.5:0.95, CPU speed, loss c
 confusion matrix and an auto-written `lab_out/REPORT.md`. The confidence threshold is chosen on the
 validation split and all numbers are reported on the test split. Run it on Colab with
 `colab/sahayak_yolo_study.ipynb` (or `python lab.py all --data datasets/sahayak28/data.yaml --epochs 20`).
-Build the dataset first with `python eval/make_dataset.py`. `eval/evaluate_finetuned.py` is deprecated.
+Build the dataset first with `python eval/make_dataset.py`. `eval/evaluate_finetuned.py` is deprecated; older scripts are in `eval/old/`.
+Real results go in `results/yolo/` (speed on the project laptop: `results/yolo/speed_laptop.md`).
+
+### Live demo (general objects)
+`python live.py --weights yolo26n.pt` opens the camera and speaks by itself: it announces the object, direction
+and rough distance when the scene changes (and every ~20 s while objects stay in view). An object is announced only
+after it was seen in 3 of the last 5 frames. Default `--conf 0.15`; uncertain items are spoken as "maybe". Press Q to quit.
+This demo is YOLO only; personal objects are taught with `python -m app.cli enroll ...` (see below).
 
 ## Personal-object recogniser on ORBIT (the novelty)
 `colab/sahayak_orbit_personal_objects.ipynb` downloads ORBIT (blind-user videos), converts it, trains the
