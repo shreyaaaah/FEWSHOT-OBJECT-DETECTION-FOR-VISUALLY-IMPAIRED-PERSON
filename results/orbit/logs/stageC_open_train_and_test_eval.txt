@@ -1,0 +1,149 @@
+{'train': 214, 'val': 59, 'test': 55} instances per split
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[model] vit_small_patch14_dinov2.lvd142m mode=partial trainable params: 3,879,680
+ep    20/1500 loss 1.6107 acc 0.760 known_kept 0.760 rej 0.500 thr 0.498  [21s]
+ep    40/1500 loss 1.1562 acc 0.920 known_kept 0.920 rej 0.700 thr 0.491  [40s]
+ep    60/1500 loss 1.2112 acc 0.940 known_kept 0.860 rej 0.900 thr 0.487  [59s]
+ep    80/1500 loss 1.2892 acc 0.900 known_kept 0.820 rej 0.600 thr 0.489  [77s]
+ep   100/1500 loss 1.3379 acc 0.960 known_kept 0.880 rej 0.100 thr 0.489  [97s]
+ep   120/1500 loss 1.2848 acc 0.840 known_kept 0.780 rej 0.900 thr 0.491  [116s]
+ep   140/1500 loss 1.1883 acc 0.980 known_kept 0.980 rej 0.000 thr 0.490  [135s]
+ep   160/1500 loss 1.0087 acc 0.980 known_kept 0.980 rej 0.900 thr 0.495  [155s]
+ep   180/1500 loss 1.3745 acc 0.860 known_kept 0.860 rej 0.500 thr 0.491  [174s]
+ep   200/1500 loss 1.3681 acc 0.900 known_kept 0.800 rej 0.800 thr 0.494  [193s]
+  [val] acc 0.787 auroc 0.846 score 0.817
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_open.pt
+ep   220/1500 loss 1.1339 acc 0.920 known_kept 0.860 rej 0.800 thr 0.494  [225s]
+ep   240/1500 loss 1.0471 acc 0.920 known_kept 0.900 rej 0.700 thr 0.493  [245s]
+ep   260/1500 loss 1.3347 acc 0.900 known_kept 0.800 rej 0.800 thr 0.496  [264s]
+ep   280/1500 loss 1.3423 acc 0.920 known_kept 0.880 rej 0.500 thr 0.498  [283s]
+ep   300/1500 loss 1.2958 acc 0.940 known_kept 0.940 rej 0.600 thr 0.499  [302s]
+ep   320/1500 loss 0.8294 acc 1.000 known_kept 0.980 rej 0.800 thr 0.498  [321s]
+ep   340/1500 loss 1.1148 acc 0.960 known_kept 0.940 rej 0.600 thr 0.503  [340s]
+ep   360/1500 loss 0.9331 acc 0.980 known_kept 0.960 rej 0.600 thr 0.502  [359s]
+ep   380/1500 loss 0.8566 acc 1.000 known_kept 0.960 rej 0.900 thr 0.500  [379s]
+ep   400/1500 loss 0.9409 acc 0.960 known_kept 0.920 rej 0.700 thr 0.496  [398s]
+  [val] acc 0.835 auroc 0.881 score 0.858
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_open.pt
+ep   420/1500 loss 1.0943 acc 0.960 known_kept 0.880 rej 0.800 thr 0.497  [431s]
+ep   440/1500 loss 1.2502 acc 0.880 known_kept 0.840 rej 0.900 thr 0.496  [450s]
+ep   460/1500 loss 0.9375 acc 0.980 known_kept 0.960 rej 0.500 thr 0.493  [469s]
+ep   480/1500 loss 1.3680 acc 0.920 known_kept 0.900 rej 0.300 thr 0.489  [488s]
+ep   500/1500 loss 1.2263 acc 0.860 known_kept 0.860 rej 0.500 thr 0.489  [507s]
+ep   520/1500 loss 0.9583 acc 0.980 known_kept 0.940 rej 0.600 thr 0.489  [527s]
+ep   540/1500 loss 1.0979 acc 0.840 known_kept 0.840 rej 1.000 thr 0.488  [546s]
+ep   560/1500 loss 0.9441 acc 0.920 known_kept 0.900 rej 1.000 thr 0.486  [565s]
+ep   580/1500 loss 1.0334 acc 0.980 known_kept 0.960 rej 0.700 thr 0.486  [584s]
+ep   600/1500 loss 0.8608 acc 1.000 known_kept 0.980 rej 0.700 thr 0.483  [603s]
+  [val] acc 0.866 auroc 0.882 score 0.874
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_open.pt
+ep   620/1500 loss 1.1139 acc 0.960 known_kept 0.940 rej 0.700 thr 0.482  [635s]
+ep   640/1500 loss 0.7727 acc 1.000 known_kept 0.980 rej 1.000 thr 0.481  [655s]
+ep   660/1500 loss 0.7761 acc 1.000 known_kept 0.980 rej 0.900 thr 0.480  [674s]
+ep   680/1500 loss 0.9435 acc 0.940 known_kept 0.920 rej 0.900 thr 0.481  [692s]
+ep   700/1500 loss 0.9083 acc 1.000 known_kept 1.000 rej 0.600 thr 0.480  [711s]
+ep   720/1500 loss 0.9578 acc 0.980 known_kept 0.980 rej 0.700 thr 0.481  [731s]
+ep   740/1500 loss 0.8647 acc 1.000 known_kept 1.000 rej 0.900 thr 0.478  [750s]
+ep   760/1500 loss 1.0012 acc 0.940 known_kept 0.940 rej 0.900 thr 0.479  [768s]
+ep   780/1500 loss 0.8535 acc 0.920 known_kept 0.920 rej 1.000 thr 0.479  [787s]
+ep   800/1500 loss 1.0702 acc 0.920 known_kept 0.860 rej 1.000 thr 0.479  [806s]
+  [val] acc 0.870 auroc 0.900 score 0.885
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_open.pt
+ep   820/1500 loss 0.8771 acc 0.980 known_kept 0.980 rej 0.800 thr 0.480  [838s]
+ep   840/1500 loss 1.0198 acc 0.940 known_kept 0.920 rej 0.600 thr 0.477  [857s]
+ep   860/1500 loss 1.3703 acc 0.920 known_kept 0.900 rej 0.100 thr 0.476  [876s]
+ep   880/1500 loss 1.0188 acc 0.960 known_kept 0.960 rej 0.600 thr 0.476  [895s]
+ep   900/1500 loss 0.7552 acc 1.000 known_kept 1.000 rej 0.600 thr 0.476  [914s]
+ep   920/1500 loss 0.8876 acc 0.980 known_kept 0.960 rej 0.900 thr 0.477  [933s]
+ep   940/1500 loss 0.9770 acc 0.960 known_kept 0.940 rej 0.800 thr 0.478  [952s]
+ep   960/1500 loss 1.2972 acc 0.920 known_kept 0.920 rej 0.300 thr 0.475  [971s]
+ep   980/1500 loss 0.8974 acc 0.980 known_kept 0.960 rej 0.800 thr 0.475  [990s]
+ep  1000/1500 loss 0.7622 acc 1.000 known_kept 1.000 rej 0.500 thr 0.474  [1008s]
+  [val] acc 0.865 auroc 0.883 score 0.874
+ep  1020/1500 loss 0.7593 acc 1.000 known_kept 0.960 rej 0.900 thr 0.474  [1041s]
+ep  1040/1500 loss 0.6951 acc 1.000 known_kept 1.000 rej 1.000 thr 0.473  [1060s]
+ep  1060/1500 loss 0.8614 acc 0.960 known_kept 0.960 rej 1.000 thr 0.473  [1079s]
+ep  1080/1500 loss 0.8263 acc 0.980 known_kept 0.960 rej 0.800 thr 0.472  [1098s]
+ep  1100/1500 loss 0.9005 acc 0.980 known_kept 0.940 rej 0.800 thr 0.472  [1117s]
+ep  1120/1500 loss 0.7833 acc 0.980 known_kept 0.980 rej 1.000 thr 0.472  [1136s]
+ep  1140/1500 loss 0.9866 acc 0.960 known_kept 0.940 rej 0.800 thr 0.472  [1155s]
+ep  1160/1500 loss 0.8371 acc 1.000 known_kept 1.000 rej 0.600 thr 0.472  [1174s]
+ep  1180/1500 loss 0.9415 acc 0.960 known_kept 0.960 rej 0.700 thr 0.471  [1193s]
+ep  1200/1500 loss 0.6632 acc 1.000 known_kept 1.000 rej 0.900 thr 0.471  [1212s]
+  [val] acc 0.844 auroc 0.886 score 0.865
+ep  1220/1500 loss 0.8903 acc 0.960 known_kept 0.960 rej 0.700 thr 0.470  [1244s]
+ep  1240/1500 loss 0.7787 acc 0.980 known_kept 0.960 rej 1.000 thr 0.470  [1262s]
+ep  1260/1500 loss 1.0301 acc 0.960 known_kept 0.920 rej 0.900 thr 0.470  [1281s]
+ep  1280/1500 loss 0.7778 acc 1.000 known_kept 0.980 rej 0.900 thr 0.470  [1300s]
+ep  1300/1500 loss 0.9031 acc 0.980 known_kept 0.980 rej 0.600 thr 0.470  [1319s]
+ep  1320/1500 loss 0.8542 acc 0.980 known_kept 0.940 rej 0.800 thr 0.469  [1338s]
+ep  1340/1500 loss 0.8618 acc 0.960 known_kept 0.940 rej 0.900 thr 0.469  [1357s]
+ep  1360/1500 loss 0.9047 acc 0.940 known_kept 0.940 rej 1.000 thr 0.469  [1377s]
+ep  1380/1500 loss 0.8543 acc 0.960 known_kept 0.960 rej 0.900 thr 0.469  [1395s]
+ep  1400/1500 loss 0.6855 acc 1.000 known_kept 0.980 rej 1.000 thr 0.469  [1414s]
+  [val] acc 0.847 auroc 0.908 score 0.878
+ep  1420/1500 loss 0.7726 acc 0.960 known_kept 0.960 rej 1.000 thr 0.469  [1446s]
+ep  1440/1500 loss 0.9291 acc 1.000 known_kept 0.960 rej 0.800 thr 0.469  [1466s]
+ep  1460/1500 loss 0.7561 acc 0.980 known_kept 0.960 rej 1.000 thr 0.469  [1485s]
+ep  1480/1500 loss 0.7144 acc 1.000 known_kept 1.000 rej 0.800 thr 0.469  [1504s]
+ep  1500/1500 loss 0.6559 acc 1.000 known_kept 0.980 rej 1.000 thr 0.469  [1523s]
+  [val] acc 0.890 auroc 0.895 score 0.893
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_open.pt
+done. best val score 0.893  -> /kaggle/working/sahayak2/checkpoints/embedder_C_partial_open.pt
+[eval] model=ckpt:embedder_C_partial_open.pt split=test instances=55
+[eval] embedded 47569 frames
+# Episodic open-set evaluation
+
+model `ckpt:embedder_C_partial_open.pt` | split `test` | 5-way + 3 unknown objects | 200 episodes | support = `spread` (cross-video where available)
+
+
+## K = 1 shots
+
+closed-set accuracy (mean prototype): **61.7 ± 1.9**  |  open-set AUROC: max-cosine **0.689 ± 0.023**, ours (calibrated prob) **0.682 ± 0.022**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 4.7 ± 1.4 |
+| mean-proto@0.5 | 31.0 ± 1.9 | 14.7 ± 2.2 |
+| mean-proto@0.6 | 17.6 ± 1.4 | 6.1 ± 1.6 |
+| mean-proto@0.7 | 7.9 ± 0.8 | 2.2 ± 0.9 |
+| mean-proto@0.8 | 2.5 ± 0.5 | 0.5 ± 0.3 |
+
+## K = 3 shots
+
+closed-set accuracy (mean prototype): **73.5 ± 1.6**  |  open-set AUROC: max-cosine **0.761 ± 0.018**, ours (calibrated prob) **0.726 ± 0.019**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 11.6 ± 1.9 |
+| mean-proto@0.5 | 50.6 ± 2.0 | 20.0 ± 2.2 |
+| mean-proto@0.6 | 34.7 ± 1.8 | 8.5 ± 1.7 |
+| mean-proto@0.7 | 16.7 ± 1.2 | 3.1 ± 1.1 |
+| mean-proto@0.8 | 4.5 ± 0.6 | 0.7 ± 0.4 |
+
+## K = 5 shots
+
+closed-set accuracy (mean prototype): **76.8 ± 1.6**  |  open-set AUROC: max-cosine **0.763 ± 0.019**, ours (calibrated prob) **0.732 ± 0.018**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 15.7 ± 2.0 |
+| mean-proto@0.5 | 54.6 ± 2.1 | 21.8 ± 2.2 |
+| mean-proto@0.6 | 40.1 ± 2.0 | 9.0 ± 1.6 |
+| mean-proto@0.7 | 21.8 ± 1.5 | 3.6 ± 1.1 |
+| mean-proto@0.8 | 7.1 ± 0.7 | 1.0 ± 0.5 |
+
+## K = 10 shots
+
+closed-set accuracy (mean prototype): **77.0 ± 1.6**  |  open-set AUROC: max-cosine **0.775 ± 0.022**, ours (calibrated prob) **0.737 ± 0.021**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 19.9 ± 2.7 |
+| mean-proto@0.5 | 58.2 ± 2.0 | 24.3 ± 2.7 |
+| mean-proto@0.6 | 43.7 ± 1.9 | 12.1 ± 2.2 |
+| mean-proto@0.7 | 24.1 ± 1.4 | 6.0 ± 1.6 |
+| mean-proto@0.8 | 8.4 ± 0.8 | 2.1 ± 0.8 |
+
+
+[report] /kaggle/working/sahayak2/reports/episodic_C_partial_open_test.json / .md

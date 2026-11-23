@@ -1,0 +1,93 @@
+{'train': 214, 'val': 59, 'test': 55} instances per split
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[model] vit_small_patch14_dinov2.lvd142m mode=partial trainable params: 3,879,680
+ep    20/1500 loss 0.6750 acc 0.780 rej nan  [20s]
+ep    40/1500 loss 0.2166 acc 0.920 rej nan  [39s]
+ep    60/1500 loss 0.2517 acc 0.920 rej nan  [59s]
+ep    80/1500 loss 0.4801 acc 0.820 rej nan  [78s]
+ep   100/1500 loss 0.3615 acc 0.880 rej nan  [97s]
+ep   120/1500 loss 0.5044 acc 0.840 rej nan  [116s]
+ep   140/1500 loss 0.2326 acc 0.940 rej nan  [135s]
+ep   160/1500 loss 0.1470 acc 1.000 rej nan  [154s]
+ep   180/1500 loss 0.3594 acc 0.840 rej nan  [173s]
+ep   200/1500 loss 0.5720 acc 0.780 rej nan  [192s]
+  [val] acc 0.802 auroc 0.840 score 0.821
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_proto.pt
+ep   220/1500 loss 0.2929 acc 0.860 rej nan  [224s]
+ep   240/1500 loss 0.3888 acc 0.860 rej nan  [243s]
+ep   260/1500 loss 0.5024 acc 0.800 rej nan  [262s]
+ep   280/1500 loss 0.4268 acc 0.880 rej nan  [281s]
+ep   300/1500 loss 0.3336 acc 0.860 rej nan  [300s]
+ep   320/1500 loss 0.0385 acc 1.000 rej nan  [319s]
+ep   340/1500 loss 0.1418 acc 0.980 rej nan  [338s]
+ep   360/1500 loss 0.2614 acc 0.900 rej nan  [357s]
+ep   380/1500 loss 0.0948 acc 0.960 rej nan  [376s]
+ep   400/1500 loss 0.1342 acc 0.980 rej nan  [395s]
+  [val] acc 0.827 auroc 0.877 score 0.852
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_proto.pt
+ep   420/1500 loss 0.2776 acc 0.940 rej nan  [427s]
+ep   440/1500 loss 0.3187 acc 0.880 rej nan  [446s]
+ep   460/1500 loss 0.1429 acc 0.960 rej nan  [465s]
+ep   480/1500 loss 0.2848 acc 0.920 rej nan  [484s]
+ep   500/1500 loss 0.4038 acc 0.780 rej nan  [504s]
+ep   520/1500 loss 0.2419 acc 0.920 rej nan  [523s]
+ep   540/1500 loss 0.6349 acc 0.740 rej nan  [542s]
+ep   560/1500 loss 0.3568 acc 0.860 rej nan  [561s]
+ep   580/1500 loss 0.0755 acc 1.000 rej nan  [580s]
+ep   600/1500 loss 0.1698 acc 0.940 rej nan  [599s]
+  [val] acc 0.843 auroc 0.865 score 0.854
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_proto.pt
+ep   620/1500 loss 0.2998 acc 0.940 rej nan  [632s]
+ep   640/1500 loss 0.0482 acc 1.000 rej nan  [651s]
+ep   660/1500 loss 0.0731 acc 0.980 rej nan  [670s]
+ep   680/1500 loss 0.2558 acc 0.900 rej nan  [689s]
+ep   700/1500 loss 0.1501 acc 0.960 rej nan  [708s]
+ep   720/1500 loss 0.3197 acc 0.900 rej nan  [726s]
+ep   740/1500 loss 0.0356 acc 1.000 rej nan  [745s]
+ep   760/1500 loss 0.1860 acc 0.940 rej nan  [765s]
+ep   780/1500 loss 0.0673 acc 0.980 rej nan  [783s]
+ep   800/1500 loss 0.3439 acc 0.840 rej nan  [803s]
+  [val] acc 0.853 auroc 0.892 score 0.872
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_proto.pt
+ep   820/1500 loss 0.1203 acc 0.960 rej nan  [834s]
+ep   840/1500 loss 0.0734 acc 0.980 rej nan  [853s]
+ep   860/1500 loss 0.1941 acc 0.940 rej nan  [872s]
+ep   880/1500 loss 0.1846 acc 0.900 rej nan  [891s]
+ep   900/1500 loss 0.0638 acc 0.980 rej nan  [910s]
+ep   920/1500 loss 0.1635 acc 0.960 rej nan  [929s]
+ep   940/1500 loss 0.1986 acc 0.960 rej nan  [948s]
+ep   960/1500 loss 0.2486 acc 0.960 rej nan  [967s]
+ep   980/1500 loss 0.1739 acc 0.920 rej nan  [985s]
+ep  1000/1500 loss 0.1697 acc 0.920 rej nan  [1004s]
+  [val] acc 0.863 auroc 0.867 score 0.865
+ep  1020/1500 loss 0.0609 acc 0.980 rej nan  [1036s]
+ep  1040/1500 loss 0.1017 acc 0.940 rej nan  [1055s]
+ep  1060/1500 loss 0.0660 acc 1.000 rej nan  [1073s]
+ep  1080/1500 loss 0.1534 acc 0.940 rej nan  [1092s]
+ep  1100/1500 loss 0.1547 acc 0.960 rej nan  [1111s]
+ep  1120/1500 loss 0.0448 acc 1.000 rej nan  [1130s]
+ep  1140/1500 loss 0.1947 acc 0.920 rej nan  [1148s]
+ep  1160/1500 loss 0.1349 acc 0.960 rej nan  [1167s]
+ep  1180/1500 loss 0.1739 acc 0.920 rej nan  [1186s]
+ep  1200/1500 loss 0.0280 acc 1.000 rej nan  [1205s]
+  [val] acc 0.831 auroc 0.884 score 0.858
+ep  1220/1500 loss 0.1319 acc 0.940 rej nan  [1237s]
+ep  1240/1500 loss 0.1162 acc 0.940 rej nan  [1256s]
+ep  1260/1500 loss 0.4124 acc 0.820 rej nan  [1275s]
+ep  1280/1500 loss 0.0255 acc 1.000 rej nan  [1294s]
+ep  1300/1500 loss 0.0917 acc 0.980 rej nan  [1313s]
+ep  1320/1500 loss 0.0648 acc 0.980 rej nan  [1332s]
+ep  1340/1500 loss 0.0766 acc 0.980 rej nan  [1351s]
+ep  1360/1500 loss 0.0657 acc 1.000 rej nan  [1370s]
+ep  1380/1500 loss 0.2495 acc 0.900 rej nan  [1389s]
+ep  1400/1500 loss 0.0354 acc 1.000 rej nan  [1408s]
+  [val] acc 0.857 auroc 0.903 score 0.880
+  [save] /kaggle/working/sahayak2/checkpoints/embedder_C_partial_proto.pt
+ep  1420/1500 loss 0.0600 acc 0.980 rej nan  [1441s]
+ep  1440/1500 loss 0.1744 acc 0.960 rej nan  [1460s]
+ep  1460/1500 loss 0.0261 acc 1.000 rej nan  [1479s]
+ep  1480/1500 loss 0.0560 acc 0.980 rej nan  [1498s]
+ep  1500/1500 loss 0.0932 acc 0.960 rej nan  [1517s]
+  [val] acc 0.870 auroc 0.886 score 0.878
+done. best val score 0.880  -> /kaggle/working/sahayak2/checkpoints/embedder_C_partial_proto.pt
+[eval] model=ckpt:embedder_C_partial_proto.pt split=test instances=55
