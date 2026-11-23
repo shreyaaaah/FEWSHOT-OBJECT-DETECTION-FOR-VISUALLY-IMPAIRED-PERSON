@@ -152,13 +152,18 @@ class Episode:
     unknown_labels: List[int] = None  # class id (0..n_unk-1) of each unknown frame
 
 
+def _kind(path: str) -> str:
+    b = os.path.basename(path).lower()
+    return "clean" if b.startswith("clean_") else ("clutter" if b.startswith("clutter_") else "any")
+
+
 class EpisodeSampler:
     """N-way K-shot episodes with an additional set of 'unknown' classes whose
     frames must be rejected (open-set episodic training)."""
 
     def __init__(self, data: Dict[str, List[str]], instances: Sequence[str], n_way=5,
                  k_shot=5, q_query=10, n_unknown_classes=2, q_unknown=5, seed=0,
-                 contiguous_support=False):
+                 contiguous_support=False, cross_video=False):
         self.data = {i: data[i] for i in instances
                      if len(data[i]) >= k_shot + q_query}
         self.insts = sorted(self.data)
@@ -169,6 +174,8 @@ class EpisodeSampler:
         self.n_unk = min(n_unknown_classes, max(0, len(self.insts) - n_way))
         self.q_unk = q_unknown
         self.contiguous = contiguous_support
+        self.cross_video = cross_video       # ORBIT protocol: support = clean_* frames, queries = clutter_* frames
+        self.kinds = {i: np.array([_kind(f) for f in self.data[i]]) for i in self.insts}
         self.rng = np.random.default_rng(seed)
 
     def sample(self) -> Episode:
@@ -178,7 +185,12 @@ class EpisodeSampler:
         sp, sl, qp, ql = [], [], [], []
         for c, inst in enumerate(known):
             files = self.data[inst]
-            if self.contiguous:                       # support = a short video segment
+            clean = np.where(self.kinds[inst] == "clean")[0]
+            clutter = np.where(self.kinds[inst] == "clutter")[0]
+            if self.cross_video and len(clean) >= self.k and len(clutter) >= 3:
+                sidx = self.rng.choice(clean, self.k, replace=False)
+                qidx = self.rng.choice(clutter, min(self.q, len(clutter)), replace=False)
+            elif self.contiguous:                     # support = a short video segment
                 s = int(self.rng.integers(0, len(files) - self.k + 1))
                 sidx = np.arange(s, s + self.k)
                 rest = np.setdiff1d(np.arange(len(files)), sidx)
@@ -191,7 +203,11 @@ class EpisodeSampler:
         up, ul = [], []
         for j, inst in enumerate(unk):
             files = self.data[inst]
-            idx = self.rng.choice(len(files), min(self.q_unk, len(files)), replace=False)
+            pool = np.where(self.kinds[inst] == "clutter")[0] if self.cross_video else np.arange(0)
+            if len(pool) >= 3:
+                idx = self.rng.choice(pool, min(self.q_unk, len(pool)), replace=False)
+            else:
+                idx = self.rng.choice(len(files), min(self.q_unk, len(files)), replace=False)
             up += [files[i] for i in idx]
             ul += [j] * len(idx)
         return Episode(sp, sl, qp, ql, up, known, ul)

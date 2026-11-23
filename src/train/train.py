@@ -73,6 +73,8 @@ def main():
     ap.add_argument("--n-way", type=int, default=None)
     ap.add_argument("--k-shot", type=int, default=None)
     ap.add_argument("--q-query", type=int, default=None)
+    ap.add_argument("--cross-video", action="store_true",
+                    help="episodes follow the ORBIT test protocol: support from clean_* frames, queries from clutter_* frames")
     ap.add_argument("--val-every", type=int, default=200)
     ap.add_argument("--val-episodes", type=int, default=40)
     ap.add_argument("--img-size", type=int, default=None)
@@ -106,14 +108,15 @@ def main():
         print(f"[data] wrote {split_path}")
     print({k: len(v) for k, v in splits.items()}, "instances per split")
 
-    train_s = EpisodeSampler(data, splits["train"], n_way, k_shot, q_query, seed=args.seed)
+    train_s = EpisodeSampler(data, splits["train"], n_way, k_shot, q_query, seed=args.seed,
+                             cross_video=args.cross_video)
     val_insts = splits["val"] or splits["train"]
     n_val_ok = sum(1 for i in val_insts if i in data and len(data[i]) >= k_shot + q_query)
     val_way = min(n_way, max(2, n_val_ok - 1))          # leave >=1 instance as 'unknown'
     if val_way < n_way:
         print(f"[data] only {n_val_ok} validation instances -> validating with {val_way}-way episodes")
     val_s = EpisodeSampler(data, val_insts, val_way, k_shot, q_query,
-                           seed=1234, contiguous_support=True)
+                           seed=1234, contiguous_support=True, cross_video=args.cross_video)
 
     model = Embedder(name, bc["embed_dim"], img, mode=args.mode,
                      unfreeze_last_blocks=bc["unfreeze_last_blocks"],
