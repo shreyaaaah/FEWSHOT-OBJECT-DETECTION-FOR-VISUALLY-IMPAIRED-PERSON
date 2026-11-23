@@ -1,0 +1,57 @@
+[eval] model=ckpt:embedder_D_lora_open.pt split=test instances=55
+[eval] embedded 47569 frames
+# Episodic open-set evaluation
+
+model `ckpt:embedder_D_lora_open.pt` | split `test` | 5-way + 3 unknown objects | 200 episodes | support = `spread` (cross-video where available)
+
+
+## K = 1 shots
+
+closed-set accuracy (mean prototype): **59.1 ± 1.9**  |  open-set AUROC: max-cosine **0.668 ± 0.021**, ours (calibrated prob) **0.663 ± 0.021**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 4.1 ± 1.1 |
+| mean-proto@0.5 | 23.8 ± 1.7 | 12.0 ± 1.8 |
+| mean-proto@0.6 | 13.6 ± 1.2 | 4.5 ± 1.2 |
+| mean-proto@0.7 | 6.5 ± 0.7 | 1.8 ± 0.7 |
+| mean-proto@0.8 | 2.7 ± 0.5 | 0.5 ± 0.2 |
+
+## K = 3 shots
+
+closed-set accuracy (mean prototype): **68.6 ± 1.7**  |  open-set AUROC: max-cosine **0.745 ± 0.018**, ours (calibrated prob) **0.710 ± 0.018**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 10.3 ± 1.7 |
+| mean-proto@0.5 | 41.5 ± 1.9 | 16.9 ± 2.0 |
+| mean-proto@0.6 | 23.7 ± 1.6 | 6.5 ± 1.5 |
+| mean-proto@0.7 | 12.1 ± 1.2 | 2.5 ± 0.9 |
+| mean-proto@0.8 | 4.2 ± 0.5 | 0.5 ± 0.3 |
+
+## K = 5 shots
+
+closed-set accuracy (mean prototype): **73.3 ± 1.5**  |  open-set AUROC: max-cosine **0.752 ± 0.018**, ours (calibrated prob) **0.721 ± 0.018**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 15.3 ± 2.0 |
+| mean-proto@0.5 | 48.1 ± 1.8 | 19.9 ± 2.1 |
+| mean-proto@0.6 | 29.8 ± 1.7 | 7.8 ± 1.5 |
+| mean-proto@0.7 | 15.0 ± 1.4 | 2.8 ± 0.9 |
+| mean-proto@0.8 | 6.3 ± 0.7 | 0.6 ± 0.3 |
+
+## K = 10 shots
+
+closed-set accuracy (mean prototype): **73.7 ± 1.8**  |  open-set AUROC: max-cosine **0.743 ± 0.022**, ours (calibrated prob) **0.707 ± 0.021**
+
+| method | correct-ID rate % (TPR) | false-accept rate % on unknown objects (FAR) |
+|---|---|---|
+| ours | 0.0 ± 0.0 | 20.9 ± 2.7 |
+| mean-proto@0.5 | 50.4 ± 1.9 | 23.0 ± 2.5 |
+| mean-proto@0.6 | 29.8 ± 1.5 | 10.6 ± 1.9 |
+| mean-proto@0.7 | 15.5 ± 1.2 | 4.8 ± 1.3 |
+| mean-proto@0.8 | 6.2 ± 0.7 | 1.3 ± 0.5 |
+
+
+[report] /kaggle/working/sahayak2/reports/episodic_D_lora_open_test.json / .md

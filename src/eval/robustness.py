@@ -15,7 +15,7 @@ import numpy as np
 
 from ..augment import adjust_light, gaussian_blur, motion_blur, occlude
 from ..config import ROOT
-from ..memory import PersonalMemory
+from ..memory import PersonalMemory, norm_name
 from ..train.datasets import ensure_splits
 from .common import fmt, list_instance_files, load_model_for_eval, mean_ci, write_report
 
@@ -99,7 +99,7 @@ def main():
                 ok = tot = 0
                 for c in known:
                     z = model.embed_bgr([degrade(im, kind, lv, rng) for im in queries[c]])
-                    ok += sum(mem.query(e).name == c for e in z)
+                    ok += sum(mem.query(e).name == norm_name(c) for e in z)
                     tot += len(z)
                 zu = model.embed_bgr([degrade(im, kind, lv, rng) for im in uq])
                 fa = np.mean([mem.query(e).name is not None for e in zu]) if len(zu) else float("nan")

@@ -19,7 +19,7 @@ import os
 import numpy as np
 
 from ..config import ROOT
-from ..memory import PersonalMemory, auroc, l2n
+from ..memory import PersonalMemory, auroc, l2n, norm_name
 from ..train.datasets import ensure_splits
 from .common import (embed_files, fmt, list_instance_files, load_model_for_eval, mean_ci,
                      video_kind, write_report)
@@ -90,8 +90,8 @@ def run(args):
             # ours
             mq = [mem.query(x) for x in q_x]
             mu = [mem.query(x) for x in u_x]
-            rows["ours"]["tpr"].append(np.mean([m.name == y for m, y in zip(mq, q_y)]))
-            rows["ours"]["acc"].append(np.mean([(m.best_name == y) for m, y in zip(mq, q_y)]))
+            rows["ours"]["tpr"].append(np.mean([m.name == norm_name(y) for m, y in zip(mq, q_y)]))
+            rows["ours"]["acc"].append(np.mean([(m.best_name == norm_name(y)) for m, y in zip(mq, q_y)]))
             rows["ours"]["far"].append(np.mean([m.name is not None for m in mu]))
             au_ours.append(auroc([m.prob for m in mq], [m.prob for m in mu]))
             for t in FIXED_THRESHOLDS:

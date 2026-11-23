@@ -1,0 +1,25 @@
+[diag] model=ckpt:embedder_C_partial_open.pt split=val instances=59
+
+== K=1  (30 episodes)  quantiles shown: 5/25/50/75/95 %
+  memory thresholds chosen        : 0.51 0.55 0.60 0.65 0.77   (clip range 0.45-0.90)
+  genuine query score (own object): 0.05 0.35 0.55 0.65 0.88
+  unknown objects, best score     : 0.10 0.20 0.29 0.37 0.52
+  memory as is        : TPR  36.3%  FAR   0.4%
+  impostor-based rule : TPR  74.8%  FAR  19.5%
+  best single global t with FAR<=5%: t=0.52 -> TPR 54.8% FAR 4.7%
+
+== K=5  (30 episodes)  quantiles shown: 5/25/50/75/95 %
+  memory thresholds chosen        : 0.45 0.50 0.55 0.62 0.71   (clip range 0.45-0.90)
+  genuine query score (own object): 0.20 0.42 0.63 0.74 0.86
+  unknown objects, best score     : 0.13 0.24 0.33 0.44 0.62
+  memory as is        : TPR  58.1%  FAR   2.8%
+  impostor-based rule : TPR  68.9%  FAR   8.7%
+  best single global t with FAR<=5%: t=0.62 -> TPR 51.3% FAR 4.7%
+
+== K=10  (30 episodes)  quantiles shown: 5/25/50/75/95 %
+  memory thresholds chosen        : 0.45 0.45 0.52 0.59 0.73   (clip range 0.45-0.90)
+  genuine query score (own object): 0.18 0.47 0.65 0.79 0.91
+  unknown objects, best score     : 0.12 0.26 0.38 0.50 0.69
+  memory as is        : TPR  61.9%  FAR   4.7%
+  impostor-based rule : TPR  68.5%  FAR   8.4%
+  best single global t with FAR<=5%: t=0.70 -> TPR 42.8% FAR 4.7%
