@@ -2,11 +2,14 @@
 Shows every object the camera sees with: name, confidence %, direction, distance.
 
 Run:   python live.py
-Keys (click the video window first):  S = speak what is in view,  A = auto-speak on/off,  Q = quit
-Options: --source 1 (other camera)   --hfov 65 (camera field of view)   --conf 0.3
+It speaks by itself: when the scene changes (and every ~20 s while objects stay in view).
+An object is announced only if it was seen in 3 of the last 5 frames (no flicker).
+Key (click the video window first):  Q = quit
+Options: --source 1 (other camera)   --hfov 65 (camera field of view)   --conf 0.15
 """
 import argparse
 import math
+from collections import deque
 import sys
 import time
 
@@ -102,6 +105,47 @@ def summary(items):
     return head + " " + lead + "; ".join(one(i) for i in shown) + "."
 
 
+class Announcer:
+    """Decides WHEN to speak. Temporal voting: a label counts only if it was seen in at least
+    `votes` of the last `window` frames, so single-frame flicker is never announced, while a
+    briefly missed object (1-2 dropped frames) stays announced."""
+
+    def __init__(self, window=5, votes=3, min_gap=4.0, repeat=20.0):
+        self.hist = deque(maxlen=window)
+        self.votes, self.min_gap, self.repeat = votes, min_gap, repeat
+        self.last_sig, self.last_t = None, -1e9
+
+    def stable(self, items):
+        self.hist.append(items)
+        out = []
+        for label in {i["label"] for f in self.hist for i in f}:
+            if sum(any(i["label"] == label for i in f) for f in self.hist) >= self.votes:
+                latest = next(f for f in reversed(self.hist) if any(i["label"] == label for i in f))
+                out += [i for i in latest if i["label"] == label]
+        out.sort(key=lambda i: (i["dist"] is None, i["dist"] or 0, -i["conf"]))
+        return out
+
+    @staticmethod
+    def signature(items):
+        sig = {}
+        for i in items:                                   # items are nearest first
+            zone = "left" if "left" in i["side"] else ("right" if "right" in i["side"] else "ahead")
+            sig.setdefault(i["label"], zone)
+        return frozenset(sig.items())
+
+    def update(self, items, now, busy=False):
+        """Return (text_to_speak_or_None, stable_items)."""
+        st = self.stable(items)
+        sig = self.signature(st)
+        if busy or (not sig and not self.last_sig):
+            return None, st
+        changed = sig != self.last_sig
+        if (changed and now - self.last_t >= self.min_gap) or (sig and now - self.last_t >= self.repeat):
+            self.last_sig, self.last_t = sig, now
+            return summary(st), st
+        return None, st
+
+
 def overlap(a, b):
     return not (a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1])
 
@@ -144,7 +188,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="0", help="camera number (0, 1, ...) or a video file")
     ap.add_argument("--weights", default="yolo26n.pt")
-    ap.add_argument("--conf", type=float, default=0.40)
+    ap.add_argument("--conf", type=float, default=0.15)
     ap.add_argument("--hfov", type=float, default=65.0)
     ap.add_argument("--no-speak", action="store_true")
     ap.add_argument("--test-voice", action="store_true")
@@ -170,8 +214,13 @@ def main():
     if not cap.isOpened():
         sys.exit("Cannot open the camera. Close other apps using it, or try:  python live.py --source 1")
 
-    fps, last_t, auto, last_auto, last_text = 0.0, time.time(), False, 0.0, ""
-    print("Running. Click the video window, then press S (speak), A (auto-speak), Q (quit).")
+    fps, last_t = 0.0, time.time()
+    ann, pending = Announcer(), None
+    if voice:
+        voice.wait_ready(10)
+        print("Voice backend:", voice.backend)
+        voice.speak("Sahayak is ready.")
+    print("Running. It speaks automatically. Click the video window and press Q to quit.")
     while True:
         ok, frame = cap.read()
         if not ok:
@@ -187,25 +236,20 @@ def main():
         fps = 0.9 * fps + 0.1 / max(now - last_t, 1e-3) if fps else 1.0 / max(now - last_t, 1e-3)
         last_t = now
         vis = draw(frame, items)
-        cv2.putText(vis, f"{fps:.1f} FPS | {len(items)} objects | S=speak A=auto Q=quit"
-                    + (" [AUTO]" if auto else ""), (8, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        text, _ = ann.update(items, now, busy=pending is not None and not pending.is_set())
+        cv2.putText(vis, f"{fps:.1f} FPS | {len(items)} objects | Q=quit", (8, 22),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         cv2.imshow("Sahayak live", vis)
-        key = cv2.waitKey(1) & 0xFF
-        text = summary(items)
-        if key == ord("q"):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
-        if key == ord("s"):
+        if text:
             print("SPOKEN:", text)
-            voice and voice.speak(text)
-        if key == ord("a"):
-            auto = not auto
-            print("auto-speak", "ON" if auto else "OFF")
-        if auto and now - last_auto > 6 and text != last_text:
-            last_auto, last_text = now, text
-            print("SPOKEN:", text)
-            voice and voice.speak(text)
+            if voice:
+                pending = voice.speak(text)
     cap.release()
     cv2.destroyAllWindows()
+    if voice:
+        voice.close()
 
 
 if __name__ == "__main__":
