@@ -23,7 +23,7 @@ Real numbers copied unedited from the Kaggle logs in `logs/`. Protocol: user-dis
 * Learned features beat the colour histogram clearly. **Frozen DINOv2 (B) is the best closed-set model** (81% at K=10): none of our fine-tuned variants (C, C-xv, D) improved closed-set accuracy over it (differences 0 to -5 points; at K>=5 C, C-xv and D are lower).
 * Fine-tuning helps **unknown-object rejection**: open-set AUROC (max-cosine) at K=5/10 is 0.76-0.79 for C/C-xv vs 0.73/0.72 for frozen DINOv2; C-xv (trained with cross-video episodes) is the best at K=5 and 10 (0.790 / 0.780).
   Cross-video training did not change closed-set accuracy (62.4 vs 61.1 at K=1, 75.5 vs 76.5 at K=5: inside the confidence intervals).
-* LoRA (D) was lower than partial fine-tuning (C) on both metrics here.
+* LoRA (D) was lower than partial fine-tuning (C) on closed-set accuracy (73.3 vs 76.5 at K=5); its AUROC is about the same as C (differences inside the confidence intervals).
 * Fine-tuning cost vs benefit in one sentence: it buys better rejection of objects the user has NOT enrolled, not better identification of enrolled ones.
 
 ## Evaluation bug found and fixed (important)
