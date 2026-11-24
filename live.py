@@ -5,9 +5,10 @@ Run:   python live.py
 It speaks by itself: when the scene changes (and every ~20 s while objects stay in view).
 An object is announced only if it was seen in 3 of the last 5 frames (no flicker).
 Key (click the video window first):  Q = quit
-ASK WHERE AN OBJECT IS: click the black console window, type e.g.  where is my laptop  and press Enter.
-It answers like "The laptop is slightly to your right, about one metre away." If the object is not in view it
-says so and keeps looking for 25 seconds. (Optional spoken questions: python live.py --mic, needs SpeechRecognition + PyAudio.)
+ASK WHERE AN OBJECT IS: just SAY it, e.g. "where is my laptop" (microphone, needs internet, see below), or type it in the
+black console window and press Enter. It answers like "The laptop is slightly to your right, about one metre away."
+If the object is not in view it says so and keeps looking for 25 seconds. While it is speaking it does not listen.
+One-time install for the microphone:  pip install SpeechRecognition sounddevice   (--no-mic switches it off)
 Options: --source 1 (other camera)   --hfov 65 (camera field of view)   --conf 0.30 (lowest confidence shown)
          --speak-conf 0.40 (lowest confidence that is spoken)
 """
@@ -21,6 +22,7 @@ import threading
 import time
 
 import cv2
+import numpy as np
 from ultralytics import YOLO
 from src.tts import Voice
 
@@ -192,32 +194,93 @@ def answer(label, items):
     return text
 
 
-def start_question_listeners(q, use_mic):
+class Segmenter:
+    """Cuts a continuous 16 kHz int16 microphone stream into spoken phrases (simple energy voice detection).
+    feed() gets one 0.1 s block and returns the raw audio of a finished phrase, otherwise None."""
+
+    def __init__(self, block_s=0.1, end_silence_s=0.8, max_s=6.0, min_s=0.4, floor=250.0):
+        self.end_blocks, self.max_blocks = round(end_silence_s / block_s), round(max_s / block_s)
+        self.min_blocks, self.floor, self.noise = round(min_s / block_s), floor, None
+        self.reset()
+
+    def reset(self):
+        self.pre, self.buf = deque(maxlen=3), []
+        self.active, self.quiet, self.loud = False, 0, 0
+
+    def feed(self, block, busy=False):
+        if busy:                                  # Sahayak itself is speaking: do not record its own voice
+            self.reset()
+            return None
+        rms = float(np.sqrt(np.mean(block.astype(np.float64) ** 2)))
+        loud = rms > max(self.floor, 3.0 * (self.noise or 0.0))
+        if not self.active:
+            if loud:
+                self.loud += 1
+            else:
+                self.loud = 0
+                self.noise = rms if self.noise is None else 0.9 * self.noise + 0.1 * rms
+            self.pre.append(block)
+            if self.loud >= 2:
+                self.active, self.buf, self.quiet = True, list(self.pre), 0
+            return None
+        self.buf.append(block)
+        self.quiet = 0 if loud else self.quiet + 1
+        if self.quiet >= self.end_blocks or len(self.buf) >= self.max_blocks:
+            speech = len(self.buf) - self.quiet
+            out = np.concatenate(self.buf).tobytes() if speech >= self.min_blocks else None
+            self.reset()
+            return out
+        return None
+
+
+def start_question_listeners(q, use_mic, is_busy=lambda: False):
+    """Questions arrive in q as (text, spoken). Typed lines always work; the microphone is optional."""
     def typed():
         for line in sys.stdin:
             if line.strip():
-                q.put(line.strip())
+                q.put((line.strip(), False))
     threading.Thread(target=typed, daemon=True).start()
     if not use_mic:
         return
     try:
+        import sounddevice as sd
         import speech_recognition as sr
-    except ImportError:
-        print("--mic needs:  pip install SpeechRecognition pyaudio   (typed questions still work)")
+    except (ImportError, OSError):
+        print("For spoken questions run once:  pip install SpeechRecognition sounddevice   (typing works meanwhile)")
         return
+    rec, work = sr.Recognizer(), queue.Queue()
 
-    def listen():
-        rec, mic = sr.Recognizer(), sr.Microphone()
-        with mic as src:
-            rec.adjust_for_ambient_noise(src, 1)
+    def recognise():
+        warned = False
         while True:
+            pcm = work.get()
             try:
-                with mic as src:
-                    audio = rec.listen(src, phrase_time_limit=5)
-                q.put(rec.recognize_google(audio))
-            except Exception:
+                text = rec.recognize_google(sr.AudioData(pcm, 16000, 2))
+            except sr.UnknownValueError:
                 continue
-    threading.Thread(target=listen, daemon=True).start()
+            except Exception as e:                # no internet, service busy ...
+                if not warned:
+                    print("Speech recognition needs internet:", e)
+                    warned = True
+                continue
+            print("HEARD:", text)
+            q.put((text, True))
+
+    def capture():
+        seg = Segmenter()
+        try:
+            with sd.InputStream(samplerate=16000, channels=1, dtype="int16", blocksize=1600) as st:
+                print("Microphone:", sd.query_devices(kind="input")["name"], "- say e.g. 'where is my laptop'")
+                while True:
+                    data, _ = st.read(1600)
+                    pcm = seg.feed(data[:, 0], busy=is_busy())
+                    if pcm:
+                        work.put(pcm)
+        except Exception as e:
+            print("Microphone problem:", e, "(typing still works)")
+
+    threading.Thread(target=recognise, daemon=True).start()
+    threading.Thread(target=capture, daemon=True).start()
 
 
 def overlap(a, b):
@@ -264,7 +327,7 @@ def main():
     ap.add_argument("--weights", default="yolo26n.pt")
     ap.add_argument("--conf", type=float, default=0.30, help="lowest confidence that is shown")
     ap.add_argument("--speak-conf", type=float, default=0.40, help="lowest confidence that is spoken")
-    ap.add_argument("--mic", action="store_true", help="also listen to spoken questions (needs SpeechRecognition)")
+    ap.add_argument("--no-mic", action="store_true", help="do not listen to spoken questions")
     ap.add_argument("--hfov", type=float, default=65.0)
     ap.add_argument("--no-speak", action="store_true")
     ap.add_argument("--test-voice", action="store_true")
@@ -293,7 +356,8 @@ def main():
     fps, last_t = 0.0, time.time()
     ann, pending = Announcer(), None
     questions, target, target_until = queue.Queue(), None, 0.0
-    start_question_listeners(questions, a.mic)
+    talk = {"until": 0.0}                          # microphone is muted while Sahayak speaks
+    start_question_listeners(questions, not a.no_mic, lambda: time.time() < talk["until"])
     names = list(model.names.values())
     if voice:
         voice.wait_ready(10)
@@ -320,8 +384,10 @@ def main():
         text, _ = ann.update(items, now, busy=pending is not None and not pending.is_set())
         reply = None
         while not questions.empty():
-            q = questions.get()
+            q, spoken = questions.get()
             found = find_target(q, names)
+            if found is None and spoken and not re.search(r"\b(where|find|locate|look for)\b", q.lower()):
+                continue                                  # background talk, not a question to Sahayak
             print("QUESTION:", q, "->", found)
             if found is None:
                 reply = "Sorry, I do not know that object. Try for example: where is my laptop."
@@ -347,10 +413,15 @@ def main():
         cv2.imshow("Sahayak live", vis)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
+        if pending is not None and not pending.is_set():
+            talk["until"] = now + 1.0
+        elif pending is not None:
+            talk["until"] = min(talk["until"], now + 0.8)   # short tail so the echo is not recorded
         if text:
             print("SPOKEN:", text)
             if voice:
                 pending = voice.speak(text)
+                talk["until"] = now + 1e9               # until its speech has finished (updated below)
     cap.release()
     cv2.destroyAllWindows()
     if voice:

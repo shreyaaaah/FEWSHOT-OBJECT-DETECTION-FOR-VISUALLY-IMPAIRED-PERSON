@@ -29,3 +29,21 @@ def test_keep_is_stricter_for_person():
     assert not live.keep("person", 0.45, 0.30)
     assert live.keep("person", 0.60, 0.30)
     assert live.keep("cup", 0.35, 0.30) and not live.keep("cup", 0.25, 0.30)
+
+
+def test_segmenter_cuts_one_phrase_and_ignores_clicks_and_own_voice():
+    import numpy as np
+    rng = np.random.default_rng(0)
+    quiet = lambda: (rng.standard_normal(1600) * 40).astype(np.int16)
+    speech = lambda: (rng.standard_normal(1600) * 3000).astype(np.int16)
+    seg = live.Segmenter()
+    out = []
+    for blk in [quiet()] * 15 + [speech()] * 12 + [quiet()] * 12:
+        r = seg.feed(blk)
+        if r:
+            out.append(r)
+    assert len(out) == 1 and 12 * 1600 * 2 <= len(out[0]) <= 24 * 1600 * 2
+    seg = live.Segmenter()                                    # one short click is not a phrase
+    assert [seg.feed(b) for b in [quiet()] * 10 + [speech()] + [quiet()] * 15] == [None] * 26
+    seg = live.Segmenter()                                    # muted while Sahayak speaks
+    assert all(seg.feed(b, busy=True) is None for b in [speech()] * 30)

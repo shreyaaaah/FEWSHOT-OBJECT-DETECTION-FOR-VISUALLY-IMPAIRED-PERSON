@@ -177,7 +177,7 @@ Real results go in `results/yolo/` (speed on the project laptop: `results/yolo/s
 `python live.py --weights yolo26n.pt` opens the camera and speaks by itself: it announces the object, direction
 and rough distance when the scene changes (and every ~20 s while objects stay in view). An object is announced only
 after it was seen in 3 of the last 5 frames. Default `--conf 0.15`; uncertain items are spoken as "maybe". Press Q to quit.
-Type e.g. `where is my laptop` in the console and press Enter: it answers with direction and distance, and keeps looking for 25 s if the object is not in view. `--mic` adds spoken questions (needs SpeechRecognition + PyAudio, untested).
+Just say "where is my laptop" (microphone; one-time `pip install SpeechRecognition sounddevice`; the recogniser is Google's online service, so it needs internet) or type it in the console: it answers with direction and distance and keeps looking for 25 s if the object is not in view. It does not listen while it is speaking. `--no-mic` turns the microphone off. The microphone path is unit-tested only for the phrase cutting; it has not been tried on real hardware yet.
 False alarms are reduced by `--conf 0.30` (shown) / `--speak-conf 0.40` (spoken) and a stricter 0.55 minimum for 'person'.
 This demo is YOLO only; personal objects are taught with `python -m app.cli enroll ...` (see below).
 
