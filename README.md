@@ -37,11 +37,10 @@ Plus: degradations that imitate blind-user footage (motion blur, low light, occl
 are used both in training and in `src/eval/robustness.py`.
 
 ### Honest status of the claims
-* **#2 is a hypothesis, not a result.** On a synthetic test with a hand-crafted baseline, the
-  calibrated memory landed on roughly the *same* TPR/FAR curve as fixed thresholds, not above it.
-  Its practical benefit (no global threshold to hand-tune, per-object adaptation, safety bonus)
-  may or may not translate into a measurable gain on real data. Your experiments decide; report
-  whichever way it comes out. A negative result reported with a good analysis is a fine capstone.
+* **#2 was tested on real ORBIT data and the hypothesis is NOT supported.** After fixing an evaluation bug, the
+  calibrated memory lands on, or slightly below, the correct-ID vs false-accept curve of fixed cosine thresholds
+  (e.g. C-xv, K=10: ours 49.2% correct / 22.8% false-accept; fixed 0.6 gives 49.2% / 17.8%). What it does offer is an automatic operating
+  point with no hand-tuned global threshold. Details: `results/orbit/README.md`.
 * **Cross-validation inside a video is optimistic** because neighbouring frames are near-duplicates.
   `cv_folds` / `cv_gap` in `config.yaml` control how pessimistic calibration is. Tune it on validation data.
 
@@ -181,6 +180,9 @@ after it was seen in 3 of the last 5 frames. Default `--conf 0.15`; uncertain it
 This demo is YOLO only; personal objects are taught with `python -m app.cli enroll ...` (see below).
 
 ## Personal-object recogniser on ORBIT (the novelty)
-`colab/sahayak_orbit_personal_objects.ipynb` downloads ORBIT (blind-user videos), converts it, trains the
-few-shot embedding model (last 2 blocks / LoRA, open-set prototypical loss) and evaluates on unseen users
-with unknown objects mixed in. Status: unit-tested and smoke-tested; not yet run on real ORBIT data.
+Run on real ORBIT data (user-disjoint split, enrol from clean videos, query cluttered videos, 5-way + 3 unknown objects, 200 episodes).
+Real results, the honest reading and the logs are in `results/orbit/` (start with `results/orbit/README.md`).
+Summary (test): frozen DINOv2 gives the best closed-set accuracy (81% at K=10; colour histogram 42%, ResNet-50 70%); fine-tuning
+(last 2 blocks, cross-video episodes) improves rejection of unknown objects (AUROC 0.77-0.78 vs 0.72-0.73) but not identification;
+the calibrated memory does not beat a well-chosen fixed threshold. Reproduce with `colab/sahayak_orbit_pipeline_colab.ipynb`
+(resume-safe, saves to Google Drive) or `colab/sahayak_orbit_reeval_colab.ipynb` (evaluation only).
