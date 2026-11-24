@@ -34,6 +34,7 @@ class LiveApp:
         self.muted = False
         self.n = 0
         self.overlay = ""
+        self.status = ""             # silent on-screen note, e.g. for objects that were not taught
 
     def say(self, text, **kw):
         self.overlay = text
@@ -48,6 +49,12 @@ class LiveApp:
             return
         o = self.s.identify_held(frame)
         name = o.match.name if (o.match is not None and o.match.level in ("high", "medium")) else None
+        if name:
+            self.status = ""
+        elif o.source == "detector" and o.label:           # something is held up but it matches nothing taught
+            self.status = f"Not one of your taught objects ({o.label})"
+        else:
+            self.status = ""
         stable, changed = self.smoother.update(name, o.match.prob if o.match else 0.1)
         if changed and stable:
             from src.phrases import identity_phrase
@@ -115,6 +122,8 @@ class LiveApp:
             vis = frame.copy()
             if self.overlay:
                 cv2.putText(vis, self.overlay[:80], (10, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            if self.status:
+                cv2.putText(vis, self.status[:70], (10, 58), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
             cv2.imshow("Sahayak", vis)
             k = cv2.waitKey(1) & 0xFF
             if k == ord("q"):
