@@ -62,6 +62,9 @@ class LiveApp:
         if not ok:
             return self.say("I cannot see anything.", force=True)
         self.say(self.s.respond(frame, text), force=True, urgent=True)
+        if it.kind == "forget":                              # make the deletion permanent, not just for this session
+            save_memory(self.s)
+            self.smoother.reset()
 
     def enroll(self, cap, name=None):
         if not name:
