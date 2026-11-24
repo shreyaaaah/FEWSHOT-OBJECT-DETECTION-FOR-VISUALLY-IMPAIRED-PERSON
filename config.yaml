@@ -5,7 +5,7 @@ backbone:
   unfreeze_last_blocks: 2
 
 detector:
-  weights: yolov8n.pt          # COCO-pretrained, downloaded by ultralytics
+  weights: yolo26n.pt          # COCO-pretrained (chosen in the detector study)
   conf: 0.35
   max_det: 20
 
