@@ -5,12 +5,19 @@ Run:   python live.py
 It speaks by itself: when the scene changes (and every ~20 s while objects stay in view).
 An object is announced only if it was seen in 3 of the last 5 frames (no flicker).
 Key (click the video window first):  Q = quit
-Options: --source 1 (other camera)   --hfov 65 (camera field of view)   --conf 0.15
+ASK WHERE AN OBJECT IS: click the black console window, type e.g.  where is my laptop  and press Enter.
+It answers like "The laptop is slightly to your right, about one metre away." If the object is not in view it
+says so and keeps looking for 25 seconds. (Optional spoken questions: python live.py --mic, needs SpeechRecognition + PyAudio.)
+Options: --source 1 (other camera)   --hfov 65 (camera field of view)   --conf 0.30 (lowest confidence shown)
+         --speak-conf 0.40 (lowest confidence that is spoken)
 """
 import argparse
 import math
 from collections import deque
+import queue
+import re
 import sys
+import threading
 import time
 
 import cv2
@@ -146,6 +153,73 @@ class Announcer:
         return None, st
 
 
+PERSON_MIN = 0.55          # 'person' is the most common false alarm (wall cracks, shadows): demand more
+SYNONYMS = {"phone": "cell phone", "mobile": "cell phone", "cellphone": "cell phone", "smartphone": "cell phone",
+            "mug": "cup", "tv": "tv", "television": "tv", "sofa": "couch", "table": "dining table",
+            "desk": "dining table", "bag": "backpack", "plant": "potted plant", "teddy": "teddy bear",
+            "bike": "bicycle", "computer": "laptop", "notebook computer": "laptop", "glasses": "wine glass",
+            "water bottle": "bottle", "man": "person", "woman": "person", "people": "person"}
+
+
+def keep(label, conf, floor):
+    """Is this detection trustworthy enough (>= floor; persons need PERSON_MIN)?"""
+    return conf >= (max(floor, PERSON_MIN) if label == "person" else floor)
+
+
+def find_target(text, names):
+    """'where is my laptop' -> 'laptop'. names = every label the detector knows. None if no object is named."""
+    t = " " + re.sub(r"[^a-z ]", " ", text.lower()) + " "
+    options = {n.lower(): n for n in names}
+    options.update({k: v for k, v in SYNONYMS.items() if v in options.values()})
+    for key in sorted(options, key=len, reverse=True):       # longest match first ('cell phone' before 'phone')
+        if re.search(r"\b" + re.escape(key) + r"s?\b", t):
+            return options[key]
+    return None
+
+
+def answer(label, items):
+    """Spoken answer for 'where is my <label>' from the current items (nearest first), or None if not visible."""
+    cand = [i for i in items if i["label"] == label]
+    if not cand:
+        return None
+    it = cand[0]
+    text = f"The {label} is {it['side']}"
+    if it["dist"] is not None:
+        text += ", " + dist_phrase(it["dist"], it["reliable"])
+    text += "."
+    if len(cand) > 1:
+        text = f"I can see {len(cand)} {label}s. The nearest one: " + text[4:]
+    return text
+
+
+def start_question_listeners(q, use_mic):
+    def typed():
+        for line in sys.stdin:
+            if line.strip():
+                q.put(line.strip())
+    threading.Thread(target=typed, daemon=True).start()
+    if not use_mic:
+        return
+    try:
+        import speech_recognition as sr
+    except ImportError:
+        print("--mic needs:  pip install SpeechRecognition pyaudio   (typed questions still work)")
+        return
+
+    def listen():
+        rec, mic = sr.Recognizer(), sr.Microphone()
+        with mic as src:
+            rec.adjust_for_ambient_noise(src, 1)
+        while True:
+            try:
+                with mic as src:
+                    audio = rec.listen(src, phrase_time_limit=5)
+                q.put(rec.recognize_google(audio))
+            except Exception:
+                continue
+    threading.Thread(target=listen, daemon=True).start()
+
+
 def overlap(a, b):
     return not (a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1])
 
@@ -188,7 +262,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="0", help="camera number (0, 1, ...) or a video file")
     ap.add_argument("--weights", default="yolo26n.pt")
-    ap.add_argument("--conf", type=float, default=0.15)
+    ap.add_argument("--conf", type=float, default=0.30, help="lowest confidence that is shown")
+    ap.add_argument("--speak-conf", type=float, default=0.40, help="lowest confidence that is spoken")
+    ap.add_argument("--mic", action="store_true", help="also listen to spoken questions (needs SpeechRecognition)")
     ap.add_argument("--hfov", type=float, default=65.0)
     ap.add_argument("--no-speak", action="store_true")
     ap.add_argument("--test-voice", action="store_true")
@@ -216,11 +292,15 @@ def main():
 
     fps, last_t = 0.0, time.time()
     ann, pending = Announcer(), None
+    questions, target, target_until = queue.Queue(), None, 0.0
+    start_question_listeners(questions, a.mic)
+    names = list(model.names.values())
     if voice:
         voice.wait_ready(10)
         print("Voice backend:", voice.backend)
         voice.speak("Sahayak is ready.")
     print("Running. It speaks automatically. Click the video window and press Q to quit.")
+    print('Ask in this console, e.g.:  where is my laptop   (then Enter)')
     while True:
         ok, frame = cap.read()
         if not ok:
@@ -231,12 +311,37 @@ def main():
         for b, c, k in zip(res.boxes.xyxy.cpu().numpy(), res.boxes.conf.cpu().numpy(),
                            res.boxes.cls.cpu().numpy().astype(int)):
             boxes.append((float(b[0]), float(b[1]), float(b[2]), float(b[3]), res.names[int(k)], float(c)))
-        items = analyze(boxes, W, H, a.hfov)
+        shown = analyze([b for b in boxes if keep(b[4], b[5], a.conf)], W, H, a.hfov)
+        items = [i for i in shown if keep(i["label"], i["conf"], a.speak_conf)]      # only these are spoken
         now = time.time()
         fps = 0.9 * fps + 0.1 / max(now - last_t, 1e-3) if fps else 1.0 / max(now - last_t, 1e-3)
         last_t = now
-        vis = draw(frame, items)
+        vis = draw(frame, shown)
         text, _ = ann.update(items, now, busy=pending is not None and not pending.is_set())
+        reply = None
+        while not questions.empty():
+            q = questions.get()
+            found = find_target(q, names)
+            print("QUESTION:", q, "->", found)
+            if found is None:
+                reply = "Sorry, I do not know that object. Try for example: where is my laptop."
+                target = None
+            else:
+                reply = answer(found, items)
+                if reply is None:
+                    target, target_until = found, now + 25
+                    reply = f"I cannot see a {found} right now. Turn slowly and I will keep looking."
+                else:
+                    target = None
+        if reply is None and target:
+            hit = answer(target, items)
+            if hit:
+                reply, target = "Found it. " + hit, None
+            elif now > target_until:
+                reply, target = f"I could not find the {target}.", None
+        if reply:
+            text = reply
+            ann.last_t = now                      # do not talk over the answer
         cv2.putText(vis, f"{fps:.1f} FPS | {len(items)} objects | Q=quit", (8, 22),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         cv2.imshow("Sahayak live", vis)
