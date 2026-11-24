@@ -1,9 +1,12 @@
-"""Sahayak LIVE demo - one file, nothing else needed.
+"""Sahayak LIVE demo - one file.
 Shows every object the camera sees with: name, confidence %, direction, distance.
+OBJECTS YOU TAUGHT (python -m app.live, key E) are recognised here too: if checkpoints/embedder.pt and
+data/memory exist, every detected box is also checked against your memory, so two phones can be announced as
+"your mobile" (purple box) and "a cell phone". Use --no-personal to turn this off.
 
 Run:   python live.py
 It speaks by itself: when the scene changes (and every ~20 s while objects stay in view).
-An object is announced only if it was seen in 3 of the last 5 frames (no flicker).
+An object is announced only if it was seen in 4 of the last 6 frames (no flicker).
 Key (click the video window first):  Q = quit
 ASK WHERE AN OBJECT IS: just SAY it, e.g. "where is my laptop" (microphone, needs internet, see below), or type it in the
 black console window and press Enter. It answers like "The laptop is slightly to your right, about one metre away."
@@ -14,6 +17,7 @@ Options: --source 1 (other camera)   --hfov 65 (camera field of view)   --conf 0
 """
 import argparse
 import math
+import os
 from collections import deque
 import queue
 import re
@@ -24,7 +28,10 @@ import time
 import cv2
 import numpy as np
 from ultralytics import YOLO
+from src.personal_scene import box_iou
 from src.tts import Voice
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # typical real-world size (longest side, metres) -> used for distance
 SIZES = {
@@ -42,6 +49,7 @@ BINS = [(0.45, "within arm's reach"), (0.80, "about half a metre away"),
         (1.40, "about one metre away"), (2.45, "about two metres away"),
         (3.50, "about three metres away")]
 COLORS = {"high": (60, 180, 75), "medium": (0, 165, 255), "low": (60, 60, 230)}  # BGR
+PERSONAL_COLOR = (220, 90, 200)                                                    # taught objects: purple
 
 
 def level(conf):
@@ -63,30 +71,48 @@ def side_phrase(angle, hfov):
     return f"slightly to your {side}" if abs(frac) < 0.5 else f"to your {side}"
 
 
-def analyze(boxes, W, H, hfov):
-    """boxes: list of (x1, y1, x2, y2, label, conf) -> list of dicts, nearest first."""
+def analyze(boxes, W, H, hfov, extras=None):
+    """boxes: list of (x1, y1, x2, y2, label, conf) -> list of dicts, nearest first.
+    extras (optional, parallel to boxes): None, or the personal-memory match for that box
+    (dict(name, prob, level, size_m, category)); the box is then reported under the taught name."""
     f = (W / 2.0) / math.tan(math.radians(hfov) / 2.0)
     items = []
-    for x1, y1, x2, y2, label, conf in boxes:
+    for idx, (x1, y1, x2, y2, label, conf) in enumerate(boxes):
+        ex = extras[idx] if extras else None
         cx = (x1 + x2) / 2
         ang = math.degrees(math.atan((cx - W / 2) / f))
         dist, reliable = None, False
         real = SIZES.get(label)
+        if ex:
+            # a taught object: its own size if the user gave one, otherwise the detector class size
+            # (only when the detector called it the same thing at teaching time) and then only roughly
+            real = ex["size_m"] or (SIZES.get(label) if ex.get("category") == label else None)
+            label = ex["name"]
+            conf = max(ex["prob"], 0.6 if ex["level"] == "high" else 0.45)
         if real:
             longest = max(x2 - x1, y2 - y1)
             dist = f * real / max(longest, 1)
             reliable = not (x1 <= 2 or y1 <= 2 or x2 >= W - 2 or y2 >= H - 2)
+            if ex and not ex["size_m"]:
+                reliable = False
             if label == "person" and (y2 - y1) / max(x2 - x1, 1) < 1.8:
                 dist, reliable = None, False          # cropped / seated person: size cue invalid
         items.append(dict(label=label, conf=conf, box=(x1, y1, x2, y2), side=side_phrase(ang, hfov),
-                          dist=dist, reliable=reliable, level=level(conf)))
+                          dist=dist, reliable=reliable, level=(ex["level"] if ex else level(conf)),
+                          personal=bool(ex)))
     items.sort(key=lambda i: (i["dist"] is None, i["dist"] or 0, -i["conf"]))
     return items
 
 
+def noun(it):
+    """'a cell phone' for a detector class, 'your mobile' (or "Shreya's mobile") for a taught object."""
+    if it.get("personal"):
+        return it["label"] if "'" in it["label"] else "your " + it["label"]
+    return ("an " if it["label"][0] in "aeiou" else "a ") + it["label"]
+
+
 def one(it):
-    art = "an " if it["label"][0] in "aeiou" else "a "
-    t = ("maybe " if it["level"] == "low" else "") + art + it["label"] + " " + it["side"]
+    t = ("maybe " if it["level"] == "low" else "") + noun(it) + " " + it["side"]
     if it["dist"] is not None:
         t += ", " + dist_phrase(it["dist"], it["reliable"])
     return t
@@ -100,10 +126,13 @@ def summary(items):
     counts = {}
     for it in items:
         if it["level"] != "low":
-            counts[it["label"]] = counts.get(it["label"], 0) + 1
+            k = (it["label"], bool(it.get("personal")))
+            counts[k] = counts.get(k, 0) + 1
     parts = []
-    for label, n in sorted(counts.items(), key=lambda t: -t[1]):
-        if n == 1:
+    for (label, pers), n in sorted(counts.items(), key=lambda t: -t[1]):
+        if pers:
+            parts.append(noun(dict(label=label, personal=True)))
+        elif n == 1:
             parts.append(("an " if label[0] in "aeiou" else "a ") + label)
         else:
             parts.append(f"{n} " + ("people" if label == "person" else label + "s"))
@@ -184,12 +213,16 @@ def keep(label, conf, floor):
 
 
 def find_target(text, names):
-    """'where is my laptop' -> 'laptop'. names = every label the detector knows. None if no object is named."""
-    t = " " + re.sub(r"[^a-z ]", " ", text.lower()) + " "
-    options = {n.lower(): n for n in names}
-    options.update({k: v for k, v in SYNONYMS.items() if v in options.values()})
+    """'where is my laptop' -> 'laptop'. names = every label the detector knows plus the taught objects.
+    A taught name beats a synonym ('mobile' taught -> 'where is my mobile' finds the taught one). None if no object is named."""
+    clean = lambda x: " ".join(re.sub(r"[^a-z ]", " ", x.lower().replace("'", "")).split())
+    t = " " + clean(text) + " "
+    options = {clean(n): n for n in names}
+    for k, v in SYNONYMS.items():
+        if v in names:
+            options.setdefault(k, v)
     for key in sorted(options, key=len, reverse=True):       # longest match first ('cell phone' before 'phone')
-        if re.search(r"\b" + re.escape(key) + r"s?\b", t):
+        if key and re.search(r"\b" + re.escape(key) + r"s?\b", t):
             return options[key]
     return None
 
@@ -200,12 +233,14 @@ def answer(label, items):
     if not cand:
         return None
     it = cand[0]
-    text = f"The {label} is {it['side']}"
+    n = noun(it)
+    subject = ("Your " + label if n == "your " + label else n) if it.get("personal") else "The " + label
+    text = f"{subject} is {it['side']}"
     if it["dist"] is not None:
         text += ", " + dist_phrase(it["dist"], it["reliable"])
     text += "."
     if len(cand) > 1:
-        text = f"I can see {len(cand)} {label}s. The nearest one: " + text[4:]
+        text = f"I can see {len(cand)} {label}s. The nearest one is {text.split(' is ', 1)[1]}"
     return text
 
 
@@ -302,6 +337,10 @@ def overlap(a, b):
     return not (a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1])
 
 
+def colour(it):
+    return PERSONAL_COLOR if it.get("personal") else COLORS[it["level"]]
+
+
 def draw(img, items):
     out = img.copy()
     H, W = out.shape[:2]
@@ -313,12 +352,13 @@ def draw(img, items):
         cv2.putText(out, name, (xc - 30, H - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     for it in items:
         x1, y1, x2, y2 = [int(v) for v in it["box"]]
-        cv2.rectangle(out, (x1, y1), (x2, y2), COLORS[it["level"]], 2)
+        cv2.rectangle(out, (x1, y1), (x2, y2), colour(it), 2)
     placed = []
     for it in sorted(items, key=lambda i: -i["conf"]):
         x1, y1, x2, y2 = [int(v) for v in it["box"]]
         d = "" if it["dist"] is None else f" | {'~' if not it['reliable'] else ''}{it['dist']:.1f} m"
-        lines = [f"{it['label']} {it['conf'] * 100:.0f}%{d}", it["side"]]
+        head = f"{it['label']} (yours)" if it.get("personal") else f"{it['label']} {it['conf'] * 100:.0f}%"
+        lines = [head + d, it["side"]]
         sz = [cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, fs, 1) for t in lines]
         lh = max(s[0][1] + s[1] for s in sz) + 5
         bw, bh = max(s[0][0] for s in sz) + 8, lh * 2 + 2
@@ -330,7 +370,7 @@ def draw(img, items):
             y = min(y + bh, H - bh)
         y = int(min(max(0, y), H - bh))
         placed.append((x, y, x + bw, y + bh))
-        cv2.rectangle(out, (x, y), (x + bw, y + bh), COLORS[it["level"]], -1)
+        cv2.rectangle(out, (x, y), (x + bw, y + bh), colour(it), -1)
         for k, t in enumerate(lines):
             cv2.putText(out, t, (x + 4, y + (k + 1) * lh - 4), cv2.FONT_HERSHEY_SIMPLEX, fs, (0, 0, 0), 1)
     return out
@@ -343,6 +383,7 @@ def main():
     ap.add_argument("--conf", type=float, default=0.30, help="lowest confidence that is shown")
     ap.add_argument("--speak-conf", type=float, default=0.40, help="lowest confidence that is spoken")
     ap.add_argument("--no-mic", action="store_true", help="do not listen to spoken questions")
+    ap.add_argument("--no-personal", action="store_true", help="do not use the personal memory (YOLO names only)")
     ap.add_argument("--hfov", type=float, default=65.0)
     ap.add_argument("--no-speak", action="store_true")
     ap.add_argument("--test-voice", action="store_true")
@@ -374,6 +415,19 @@ def main():
     talk = {"until": 0.0}                          # microphone is muted while Sahayak speaks
     start_question_listeners(questions, not a.no_mic, lambda: time.time() < talk["until"])
     names = list(model.names.values())
+    tagger = None
+    ckpt = os.path.join(ROOT, "checkpoints", "embedder.pt")
+    if not a.no_personal and os.path.exists(ckpt) and os.path.exists(os.path.join(ROOT, "data", "memory", "memory.json")):
+        try:
+            from src.factory import build_system
+            from src.personal_scene import PersonalTagger
+            system = build_system(ckpt=ckpt, speak=False, use_detector=False)
+            if len(system.mem):
+                tagger = PersonalTagger(system.emb, system.mem)
+                names += list(system.mem.names())
+                print("Personal objects it will look for:", ", ".join(system.mem.names()))
+        except Exception as e:
+            print("[personal objects off]", e)
     if voice:
         voice.wait_ready(10)
         print("Voice backend:", voice.backend)
@@ -385,13 +439,18 @@ def main():
         if not ok:
             break
         H, W = frame.shape[:2]
-        res = model.predict(frame, conf=a.conf, verbose=False, agnostic_nms=True)[0]
+        res = model.predict(frame, conf=min(a.conf, 0.15) if tagger else a.conf, verbose=False, agnostic_nms=True)[0]
         boxes = []
         for b, c, k in zip(res.boxes.xyxy.cpu().numpy(), res.boxes.conf.cpu().numpy(),
                            res.boxes.cls.cpu().numpy().astype(int)):
             boxes.append((float(b[0]), float(b[1]), float(b[2]), float(b[3]), res.names[int(k)], float(c)))
-        shown = analyze([b for b in boxes if keep(b[4], b[5], a.conf)], W, H, a.hfov)
-        items = [i for i in shown if keep(i["label"], i["conf"], a.speak_conf)]      # only these are spoken
+        extras = tagger.tag(frame, boxes) if tagger else [None] * len(boxes)
+        kept = [(b, ex) for b, ex in zip(boxes, extras) if ex is not None or keep(b[4], b[5], a.conf)]
+        hit = tagger.centre_hit if tagger else None
+        if hit and not any(ex and box_iou(b[:4], hit[0]) > 0.3 for b, ex in kept):      # held object YOLO did not box
+            kept.append(((*hit[0], "object", hit[1]["prob"]), hit[1]))
+        shown = analyze([b for b, _ in kept], W, H, a.hfov, [ex for _, ex in kept])
+        items = [i for i in shown if i.get("personal") or keep(i["label"], i["conf"], a.speak_conf)]  # only these are spoken
         now = time.time()
         fps = 0.9 * fps + 0.1 / max(now - last_t, 1e-3) if fps else 1.0 / max(now - last_t, 1e-3)
         last_t = now
