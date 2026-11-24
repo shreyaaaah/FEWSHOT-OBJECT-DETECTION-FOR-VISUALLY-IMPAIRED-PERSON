@@ -114,23 +114,38 @@ def summary(items):
     return head + " " + lead + "; ".join(one(i) for i in shown) + "."
 
 
+def iou(a, b):
+    iw, ih = min(a[2], b[2]) - max(a[0], b[0]), min(a[3], b[3]) - max(a[1], b[1])
+    if iw <= 0 or ih <= 0:
+        return 0.0
+    inter = iw * ih
+    return inter / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter)
+
+
 class Announcer:
     """Decides WHEN to speak. Temporal voting: a label counts only if it was seen in at least
     `votes` of the last `window` frames, so single-frame flicker is never announced, while a
     briefly missed object (1-2 dropped frames) stays announced."""
 
-    def __init__(self, window=5, votes=3, min_gap=4.0, repeat=20.0):
+    def __init__(self, window=6, votes=4, min_gap=4.0, repeat=20.0):
         self.hist = deque(maxlen=window)
         self.votes, self.min_gap, self.repeat = votes, min_gap, repeat
         self.last_sig, self.last_t = None, -1e9
 
     def stable(self, items):
         self.hist.append(items)
-        out = []
+        cands = []
         for label in {i["label"] for f in self.hist for i in f}:
             if sum(any(i["label"] == label for i in f) for f in self.hist) >= self.votes:
                 latest = next(f for f in reversed(self.hist) if any(i["label"] == label for i in f))
-                out += [i for i in latest if i["label"] == label]
+                score = sum(max((i["conf"] for i in f if i["label"] == label), default=0.0) for f in self.hist)
+                cands.append((score, [i for i in latest if i["label"] == label]))
+        out = []
+        # the same spot labelled differently over time (mug: 'cell phone' then 'cup'): keep the label with
+        # the larger total confidence over the window, drop the other
+        for score, its in sorted(cands, key=lambda c: -c[0]):
+            if not any(iou(a["box"], b["box"]) > 0.5 for a in its for b in out):
+                out += its
         out.sort(key=lambda i: (i["dist"] is None, i["dist"] or 0, -i["conf"]))
         return out
 

@@ -1,8 +1,9 @@
 from live import Announcer
 
 
-def it(label, side="straight ahead", dist=1.0, conf=0.7):
-    return dict(label=label, side=side, dist=dist, conf=conf, reliable=True, level="high", box=(0, 0, 1, 1))
+def it(label, side="straight ahead", dist=1.0, conf=0.7, at=None):
+    k = at if at is not None else {"cup": 0, "person": 10}.get(label, 20)
+    return dict(label=label, side=side, dist=dist, conf=conf, reliable=True, level="high", box=(k, 0, k + 5, 5))
 
 
 def run(frames, **kw):
@@ -46,3 +47,10 @@ def test_repeat_while_unchanged():
     a = Announcer(repeat=20.0)
     spoken = [a.update([it("cup")], t)[0] for t in [0.0, 0.2, 0.4, 0.6, 21.0]]
     assert sum(bool(x) for x in spoken) == 2
+
+
+def test_label_flip_on_same_object_keeps_the_better_label():
+    # a mug is first seen as 'cell phone' (conf 0.42) for 2 frames, then as 'cup' (conf 0.7) for 4 frames
+    frames = [[it("cell phone", conf=0.42, at=0)]] * 2 + [[it("cup", conf=0.7, at=0)]] * 6
+    sp = run(frames)
+    assert sp and all("cell phone" not in t for _, t in sp) and "cup" in sp[0][1]
