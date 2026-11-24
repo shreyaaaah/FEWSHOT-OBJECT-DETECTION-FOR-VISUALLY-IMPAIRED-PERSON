@@ -2,7 +2,7 @@
 import os
 from typing import Optional
 
-from .audio import Speaker
+from .speaker import VoiceSpeaker
 from .config import ROOT, get_device, load_config
 from .memory import PersonalMemory
 from .pipeline import Sahayak
@@ -52,7 +52,7 @@ def build_system(cfg_path=None, ckpt=None, memory_dir=None, speak=True,
             depth_model = RelativeDepth(device=dev)
         except Exception as e:
             print(f"[warn] depth model unavailable ({e}); using size heuristic only")
-    spk = Speaker(enabled=speak)
+    spk = VoiceSpeaker(enabled=speak)
     system = Sahayak(emb, mem, det, depth_model, spk, cfg)
     system.memory_dir = memory_dir
     return system

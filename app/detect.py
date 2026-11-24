@@ -18,7 +18,7 @@ import time
 
 import cv2
 
-from src.audio import Speaker
+from src.speaker import VoiceSpeaker
 from src.detector import Detector
 from src.scene import analyze, annotate, summary, table
 
@@ -137,7 +137,7 @@ def main():
     ap.add_argument("--auto", type=float, default=0.0, help="live: announce the scene every N seconds")
     a = ap.parse_args()
     det = Detector(a.weights, conf=a.conf, max_det=30)
-    spk = None if a.no_speak else Speaker(enabled=True, verbose=False)
+    spk = None if a.no_speak else VoiceSpeaker(enabled=True, verbose=False)
     if a.image:
         for p in a.image:
             process_image(det, p, a.out, a.hfov, spk)
