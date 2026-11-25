@@ -100,21 +100,107 @@ Spoken commands: *where is my bottle · what is this · what is around me · sav
 forget keys · what do you know · help*. Microphone input uses `SpeechRecognition` and falls back to
 typing, so everything also works without a microphone.
 
-## 5. Code map
+## 5. Code map: where is what (use this in the viva)
+
+Line numbers are for the commit that added this section; if a file was edited later, search the function name.
+To *show the layers live*, run `python tools/show_layers.py` (prints every layer count below from the real code).
+
+### 5.1 "Show me where you did ..."
+
+| Question | File | What to open |
+|---|---|---|
+| Where is the model created? | `src/embedder.py` | `Embedder` L47 (its `__init__`): DINOv2 ViT-S/14 backbone L60 (`timm.create_model`), metric head L63 (`Linear 384-512, GELU, Linear 512-256`) |
+| Which layers did you train? | `src/embedder.py`, `config.yaml` | `_set_trainable` L68. **Partial**: `_unfreeze_last` L85 = last 2 of 12 blocks + final norm + head (`backbone.unfreeze_last_blocks: 2` in `config.yaml`). **LoRA**: `apply_lora` L34 + `LoRALinear` L21 = rank 8 adapters on the qkv of all 12 blocks. **Frozen**: nothing in the backbone |
+| Output vector | `src/embedder.py` | `forward` L127: backbone -> head -> L2 normalise (256 numbers, unit length) |
+| Learning rates, optimiser | `src/embedder.py`, `src/train/train.py`, `config.yaml` | `param_groups` L113 (backbone 1e-5, head 1e-3 from `config.yaml` `train:`); AdamW `train.py` L130; warm-up 50 steps + cosine decay L131; fp16 `GradScaler` L133; gradient clipping L162 |
+| The loss | `src/train/losses.py` | `OpenProtoLoss` L26: prototypes L21, learned reject score `self.thr` L31, logit scale = 1/temperature = 10; `supcon_loss` L60 (weight 0.2, `--lam-supcon`); `batch_hard_triplet` L75 (ablation only). Used in `train.py` L126 and L153 |
+| Episodes (N-way K-shot) | `src/train/datasets.py` | `EpisodeSampler` L160, `sample` L181; cross-video support/query from clean/clutter videos: `_kind` L155 and `cross_video` flag |
+| User-disjoint splits | `src/train/datasets.py` | `group_of` L40 (user id), `split_instances` L45, `ensure_splits` L74 |
+| Augmentation for training | `src/train/datasets.py` | `MotionBlur` L95, `PadSquare` L86, `train_transform` L115 |
+| Training loop | `src/train/train.py` | `main` L62, `embed_episode` L32, `evaluate` L43 (validation every 200 episodes) |
+| Teaching an object | `src/pipeline.py`, `src/frames.py`, `src/augment.py` | `enroll_from_frames` L113; `select_frames` L42 (25 sharpest); `augment_crop` L47; `random_background_crops` L75 |
+| Prototypes (several per object) | `src/memory.py` | `spherical_kmeans` L45, `build_bank` L73 (max 8), `bank_score` L84 |
+| Personal threshold (blocked CV) | `src/memory.py` | `_cv_genuine` L234 (10 blocked folds), `_calibrate_all` L256 (5th / 99th percentile, clipped 0.45-0.90, critical +0.05) |
+| Decision: high / medium / ambiguous / unknown | `src/memory.py` | `PersonalMemory.query` L322 (margin 0.04); `enroll` L199; `forget` L225; `save` L350 / `load` L371; thresholds set in `config.yaml` `memory:` |
+| Identify the held object, scene, "where is my X" | `src/pipeline.py` | `_locate_held_object` L64, `identify_held` L140, `scene` L152, `find_personal` L176 (detector-free sliding windows, `grid_boxes` in `src/imgutil.py` L67), `answer_find` L220, `respond` L267 |
+| Spoken wording | `src/phrases.py`, `src/spatial.py` | `identity_phrase` L8 ("This is / might be / not sure"); `side_phrase` L51, `distance_phrase` L26 |
+| Distance and direction | `src/depth.py`, `src/spatial.py`, `live.py` | pinhole formula `size_distance` L38; `focal_px` L36, `horizontal_angle` L40; optional depth model `RelativeDepth` L94; general demo: `analyze` in `live.py` L74 |
+| Reduce flicker | `live.py`, `src/smoothing.py` | `Announcer` L154 (4 of last 6 frames); personal app: `VoteSmoother` L6 |
+| Confidence thresholds of the demo | `live.py` | `keep` L210 (0.30 shown, 0.40 spoken, 0.55 for person) |
+| "Where is my laptop" (voice or typed) | `live.py` | `find_target` L215, `answer` L230, `Segmenter` L247 (cuts speech from the microphone), `start_question_listeners` L286 (Google recogniser via SpeechRecognition) |
+| Two phones: "your mobile" vs "a cell phone" | `src/personal_scene.py`, `live.py` | `PersonalTagger` L14 (`tag` L32) re-names YOLO boxes using the personal memory; wiring in `live.py` `main` L379 |
+| Speech output | `src/tts.py`, `src/speaker.py` | `Voice` L9 (SAPI, pyttsx3, PowerShell fallbacks); `VoiceSpeaker` L9 used by the personal app |
+| Voice commands of the personal app | `src/voice.py`, `app/live.py` | `parse_command` L64, `resolve_target` L104, `listen_once` L129; `LiveApp` L27 (keys E teach, V command, I identify, S scene) |
+| Detector wrapper (YOLO) | `src/detector.py`, `config.yaml` | `Detector` L14; weights `yolo26n.pt` set in `config.yaml` `detector:` |
+
+### 5.2 How many layers, and where
+
+| Model | Layers | Parameters | Where it comes from | What we trained |
+|---|---|---|---|---|
+| YOLO11n | 181 | 2.62 M | `ultralytics` library (`yolo11n.pt`) | Zero-shot, and fine-tuned with `lab.py` `train_one` L314 |
+| YOLO26n | 260 (120 after fusing for inference) | 2.57 M | `ultralytics` (`yolo26n.pt`) | same; **used in the demo** |
+| YOLO26s | 260 | 10.01 M | `ultralytics` (`yolo26s.pt`) | same |
+| DINOv2 ViT-S/14 backbone | patch embedding + 12 transformer blocks + final LayerNorm; each block = LayerNorm, attention (6 heads, qkv 384->1152), LayerNorm, MLP (384->1536->384) | 21,628,800 | `timm` model `vit_small_patch14_dinov2.lvd142m` (pretrained by Meta) | Partial: blocks 10-11; LoRA: qkv of all 12; Frozen: none |
+| Metric head | 2 linear layers (384->512, GELU, 512->256) + L2 normalise | 328,448 | `src/embedder.py` L63 | always trained (except baseline B) |
+| Trainable parameters | frozen head only 328,448; **partial 3,879,680**; **LoRA 475,904**; full 21,957,248 | | `Embedder.n_trainable` L123 | |
+
+The YOLO layers are defined inside the ultralytics library, not in our code. Our code in `lab.py` loads those weights, evaluates and fine-tunes them.
+
+### 5.3 Plots and result files: which code made them
+
+| Output | Made by | What it shows |
+|---|---|---|
+| `results/yolo/fig1_loss_curves.png` | `lab.py` `cmd_report` L394 (savefig L424) | training and validation loss per epoch for the fine-tuned detectors |
+| `fig2_metrics_per_epoch.png` | `lab.py` L441 | validation precision, recall and mAP per epoch |
+| `fig3_before_after.png` | `lab.py` L463 | zero-shot COCO weights vs fine-tuned, test set, per metric |
+| `fig4_pr_f1_curves.png` | `lab.py` L483 | precision-recall and F1-vs-confidence curves (used to choose the threshold on validation) |
+| `fig5_confusion.png` | `lab.py` L508 | confusion matrix per model (which classes are mistaken for which) |
+| `fig6_per_class_ap50.png` | `lab.py` L525 | AP@0.5 per class |
+| `fig7_speed_vs_accuracy.png` | `lab.py` L542 (speed from `cmd_speed` L283) | accuracy against CPU milliseconds per frame |
+| `results/yolo/REPORT.md` | `lab.py` `cmd_report` | all detector tables (P / R / F1 / mAP / speed), written automatically |
+| `results/yolo/operating_points.md` | `tools/operating_points.py` | precision / recall / F1 at chosen confidence thresholds |
+| `results/yolo/speed_laptop.md` | `lab.py speed` | speed on the project laptop CPU |
+| `results/orbit/orbit_results.png` | plot cell of `colab/sahayak_orbit_pipeline_colab.ipynb` (reads `reports/episodic_*_test.json`) | left: closed-set accuracy vs K; right: open-set AUROC vs K, for all models |
+| `results/orbit/README.md` tables | copied from `results/orbit/logs/*.txt`, which are the outputs of `src/eval/episodic.py` `run` L50 (`main` L126) | accuracy, AUROC, correct-ID and false-accept rates per K |
+| ORBIT baselines A0, A, B | same script: `--frozen-backbone hsv_hist` (A0, `HistEmbedder` in `src/eval/common.py` L63), `--frozen-backbone resnet50.a1_in1k` (A), `--frozen-backbone vit_small_patch14_dinov2.lvd142m` (B, frozen DINOv2); fine-tuned models: `--ckpt <file>.pt` | |
+| Robustness (blur, low light, occlusion) | `src/eval/robustness.py` | code ready, not yet run on real data |
+| Distance against a tape measure | `src/eval/distance_eval.py` | code ready, not yet run on real data |
+| Memory diagnosis | `tools/diagnose_memory.py` | read-only check of thresholds and score ranges |
+
+### 5.4 Pipeline of the experiments
+
+1. Data: `eval/make_dataset.py` (COCO 28 classes for YOLO) and `tools/prepare_orbit.py` (ORBIT frames into `<user>__<object>/` folders; clean_ / clutter_ prefixes).
+2. Detector study: `lab.py all` (train, evaluate, speed, report) via `colab/sahayak_yolo_study.ipynb`.
+3. Train the embedder: `src/train/train.py` (`--mode frozen|partial|lora|full`, `--loss open`, `--cross-video`, `--episodes 1500`; unspecified values come from `config.yaml` `train:`).
+4. Evaluate: `src/eval/episodic.py` (`--k-shots 1 3 5 10`, 200 episodes, 5-way + 3 unknown objects by default, `--cross-video`).
+5. Notebooks that run steps 1-4 end to end: `colab/sahayak_orbit_pipeline_colab.ipynb` (and `colab/sahayak_orbit_reeval_colab.ipynb` for evaluation only).
+6. Demos: `live.py` (general objects + your taught objects + questions) and `app/live.py` (teach and identify).
+
+### 5.5 File index
 
 ```
-config.yaml                    all hyper-parameters
-src/memory.py                  novelty #2 (+ AUROC, spherical k-means)
-src/train/{datasets,losses,train}.py   episodic transfer learning, novelty #1
-src/embedder.py                backbone + head; frozen / partial / LoRA / full
-src/pipeline.py                enrollment, identify, find (novelty #3), scene, answers
-src/depth.py  src/spatial.py   novelty #4 and direction / clock / distance phrases
-src/phrases.py src/voice.py    novelty #5, command parsing, microphone
-src/detector.py                COCO YOLO or open-vocabulary YOLO-World
-src/eval/{episodic,robustness,distance_eval}.py   all evaluations
-app/{cli,live}.py              user interfaces
-tools/                         dataset preparation
-tests/                         unit + pipeline tests
+config.yaml                              all hyper-parameters (backbone, memory, enrolment, training, detector)
+live.py                                  general live demo: YOLO + direction + distance + voting + questions + taught names
+lab.py                                   YOLO detector study (train, evaluate, speed, figures, REPORT.md)
+src/embedder.py                          DINOv2 backbone + metric head; frozen / partial / LoRA / full
+src/train/{datasets,losses,train}.py     episodic training, losses, splits
+src/memory.py                            personal memory: prototypes, thresholds, decisions
+src/pipeline.py                          teach, identify, find, scene, answers
+src/personal_scene.py                    names YOLO boxes with taught objects
+src/detector.py  src/scene.py            YOLO wrapper; scene description (analyze, summary) used by app/detect.py
+src/spatial.py  src/depth.py             direction, distance phrases, pinhole / depth
+src/phrases.py  src/voice.py             spoken wording; command parsing and microphone
+src/tts.py  src/speaker.py  src/audio.py text-to-speech (tts + speaker are the working ones; audio.py is the older pyttsx3 version, now only used for the `beep` sound)
+src/factory.py  src/config.py  src/schema.py   wiring of the pipeline, config loader, small data classes (Det, Match)
+src/frames.py  src/augment.py  src/imgutil.py   frame selection, augmentation, image helpers
+src/smoothing.py                         temporal vote smoothing for the personal app
+src/eval/{episodic,robustness,distance_eval,common}.py   all evaluations
+app/{cli,live,detect}.py                 user interfaces
+eval/make_dataset.py                     exports the 28-class COCO set (8k train / 1k val / 1k test) for the YOLO study
+tools/                                   prepare_orbit, diagnose_memory, operating_points, show_layers, videos_to_instances, make_synthetic
+tests/                                   83 unit and pipeline tests
+results/yolo, results/orbit              real results, figures and logs
+colab/ kaggle/                           notebooks that produced the results (YOLO study, ORBIT pipeline, re-evaluation)
 ```
 
 ## 6. Evaluation checklist for the report
